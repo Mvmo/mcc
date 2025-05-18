@@ -17,6 +17,8 @@ pub enum Token {
     LeftBrace,
     RightBrace,
     Semicolon,
+
+    Eof,
 }
 
 fn find_keyword_or_symbol(input: &str) -> Option<(Token, &str)> {
@@ -120,5 +122,6 @@ pub fn tokenize(input: String) -> Vec<Token> {
         input = remaining_input.to_string();
     }
 
+    tokens.push(Token::Eof);
     return tokens
 }
