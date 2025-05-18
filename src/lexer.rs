@@ -4,7 +4,7 @@ use regex::Regex;
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Token {
     Identifier(String),
-    Constant(i32),
+    Const(i32),
 
     // Keywords
     Int,
@@ -76,7 +76,7 @@ fn find_number(input: &str) -> Option<(Token, &str)> {
     let result = result.unwrap();
 
     return Some((
-        Token::Constant(result.as_str().parse::<i32>().unwrap()),
+        Token::Const(result.as_str().parse::<i32>().unwrap()),
         input.split_at(result.len()).1
     ))
 }
