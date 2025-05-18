@@ -1,6 +1,6 @@
 use std::{path::PathBuf, process::{self, Command}};
 
-pub fn assemble(source: PathBuf) {
+pub fn with_gcc(source: PathBuf) {
     let command_result = Command::new("gcc")
         .args(vec![
             &source.to_string_lossy(),
