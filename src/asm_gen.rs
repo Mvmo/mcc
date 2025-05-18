@@ -1,30 +1,31 @@
 use crate::tacco_ir::{TaccoFunctionDef, TaccoInstruction, TaccoProgram, TaccoUnaryOperator, TaccoVal};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AsmProgram {
     pub function_definition: AsmFunctionDef,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AsmFunctionDef {
     pub name: String,
     pub instructions: Vec<AsmInstruction>
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AsmInstruction {
     Mov(AsmOperand, AsmOperand),
     Unary(AsmUnaryOperator, AsmOperand),
+    AllocateStack(i32),
     Ret
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Reg {
     AX,
     R10,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AsmOperand {
     Imm(i32),
     Register(Reg),
@@ -32,7 +33,7 @@ pub enum AsmOperand {
     Stack(i32),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AsmUnaryOperator {
     Neg,
     Not
