@@ -1,6 +1,6 @@
 use std::{fs, path::PathBuf, process};
 
-use crate::{asm_gen::{AsmFunctionDef, AsmInstruction, AsmProgram, Operand}, parser::Program};
+use crate::{asm_gen::{AsmFunctionDef, AsmInstruction, AsmProgram, AsmOperand}, parser::Program};
 
 pub fn emit(asm_program: AsmProgram, to: PathBuf) {
     let mut lines = Vec::new();
@@ -30,13 +30,15 @@ fn write_instruction(lines: &mut Vec<String>, instruction: AsmInstruction) {
         },
         AsmInstruction::Ret => {
             lines.push(format!("ret"));
-        }
+        },
+        _ => {}
     }
 }
 
-fn translate_operand(operand: Operand) -> String {
+fn translate_operand(operand: AsmOperand) -> String {
     match operand {
-        Operand::Imm(int_value) => format!("${}", int_value),
-        Operand::Register => format!("%eax"),
+        AsmOperand::Imm(int_value) => format!("${}", int_value),
+        AsmOperand::Register(_) => format!("%eax"),
+        _ => format!("")
     }
 }
