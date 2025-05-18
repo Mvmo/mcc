@@ -5,6 +5,7 @@ use clap::{Parser, command, arg};
 mod preprocess;
 mod lexer;
 mod parser;
+mod tacco_ir;
 mod asm_gen;
 mod code_emitter;
 mod assembler;
@@ -18,6 +19,8 @@ struct CompilerArgs {
     lex: bool,
     #[arg(long)]
     parse: bool,
+    #[arg(long)]
+    tacco: bool,
     #[arg(long)]
     codegen: bool,
 }
@@ -38,6 +41,11 @@ fn main() {
         process::exit(0);
     }
 
+    let tacco_ir = tacco_ir::transform(program.clone());
+    if compiler_args.tacco {
+        process::exit(0);
+    }
+
     let asm = asm_gen::generate(program);
     if compiler_args.codegen {
         process::exit(0);
@@ -45,5 +53,5 @@ fn main() {
 
     let output_assembly_file = compiler_args.input_file.with_extension("s");
     code_emitter::emit(asm, output_assembly_file.clone());
-    assembler::assemble(output_assembly_file);
+    assembler::with_gcc(output_assembly_file);
 }
