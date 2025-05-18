@@ -2,27 +2,25 @@ use std::{collections::VecDeque, fmt, process};
 
 use crate::lexer::Token;
 
-struct FunctionDef {
-    name: String,
-    body: Statement,
+#[derive(Debug)]
+pub struct FunctionDef {
+    pub name: String,
+    pub body: Statement,
 }
 
+#[derive(Debug)]
 pub struct Program {
-    function_definition: FunctionDef,
+    pub function_definition: FunctionDef,
 }
 
-enum Expression {
+#[derive(Debug)]
+pub enum Expression {
     Const(i32)
 }
 
-enum Statement {
+#[derive(Debug)]
+pub enum Statement {
     Return(Expression),
-}
-
-impl fmt::Display for Statement {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "")
-    }
 }
 
 type Tokens = VecDeque<Token>;
