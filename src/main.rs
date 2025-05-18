@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, process};
 
 use clap::{Parser, command, arg};
 
@@ -19,7 +19,17 @@ struct CompilerArgs {
 
 fn main() {
     let compiler_args = CompilerArgs::parse();
+
     let preprocessed = preprocess::with_gcc(compiler_args.input_file);
+
     let tokens = lexer::tokenize(preprocessed);
+    if compiler_args.lex {
+        process::exit(0);
+    }
+
     let program = parser::parse(tokens);
+    if compiler_args.parse {
+        process::exit(0);
+    }
+
 }
