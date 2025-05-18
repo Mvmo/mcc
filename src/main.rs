@@ -7,6 +7,7 @@ mod lexer;
 mod parser;
 mod tacco_ir;
 mod asm_gen;
+mod asm_reg_resolver;
 mod code_emitter;
 mod assembler;
 
@@ -41,17 +42,21 @@ fn main() {
         process::exit(0);
     }
 
-    let tacco_ir = tacco_ir::transform(program.clone());
+    let tacco_ir_program = tacco_ir::transform(program.clone());
     if compiler_args.tacco {
         process::exit(0);
     }
 
-    let asm = asm_gen::generate(program);
+    let asm_program = asm_reg_resolver::resolve_pseudo_registers(
+        &asm_gen::generate(tacco_ir_program)
+    );
+
     if compiler_args.codegen {
         process::exit(0);
     }
 
+
     let output_assembly_file = compiler_args.input_file.with_extension("s");
-    code_emitter::emit(asm, output_assembly_file.clone());
+    code_emitter::emit(asm_program, output_assembly_file.clone());
     assembler::with_gcc(output_assembly_file);
 }
