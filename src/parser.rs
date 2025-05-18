@@ -2,23 +2,27 @@ use std::{collections::VecDeque, fmt, process};
 
 use crate::lexer::Token;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FunctionDef {
     pub name: String,
     pub body: Statement,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Program {
     pub function_definition: FunctionDef,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expression {
-    Const(i32)
+    Const(i32),
+    Unary {
+        operator: Token,
+        inner_expression: Box<Expression>
+    },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Statement {
     Return(Expression),
 }
@@ -67,7 +71,26 @@ fn parse_identifier(tokens: &mut Tokens) -> String {
 }
 
 fn parse_expression(tokens: &mut Tokens) -> Expression {
-    return Expression::Const(parse_int(tokens))
+    let ts = tokens.clone();
+    let current_token = ts.front().unwrap(); // TODO: remove unwrap
+
+    return match current_token {
+        Token::Const(_) => Expression::Const(parse_int(tokens)),
+        Token::ComplementOp | Token::MinusOp | Token::DecrementOp => {
+            tokens.pop_front();
+            return Expression::Unary { operator: current_token.clone(), inner_expression: Box::new(parse_expression(tokens)) }
+        },
+        Token::LeftParen => {
+            expect_token(tokens, Token::LeftParen);
+            let expr = parse_expression(tokens);
+            expect_token(tokens, Token::RightParen);
+
+            return expr;
+        }
+        _ => {
+            process::exit(2);
+        }
+    }
 }
 
 fn parse_int(tokens: &mut Tokens) -> i32 {
