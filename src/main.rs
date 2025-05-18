@@ -4,6 +4,7 @@ use clap::{Parser, command, arg};
 
 mod preprocess;
 mod lexer;
+mod parser;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -18,4 +19,5 @@ fn main() {
     let compiler_args = CompilerArgs::parse();
     let preprocessed = preprocess::with_gcc(compiler_args.input_file);
     let tokens = lexer::tokenize(preprocessed);
+    let program = parser::parse(tokens);
 }
