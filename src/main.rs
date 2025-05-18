@@ -13,6 +13,8 @@ struct CompilerArgs {
 
     #[arg(long)]
     lex: bool,
+    #[arg(long)]
+    parse: bool,
 }
 
 fn main() {
