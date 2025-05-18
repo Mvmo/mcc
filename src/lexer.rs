@@ -17,6 +17,9 @@ pub enum Token {
     LeftBrace,
     RightBrace,
     Semicolon,
+    DecrementOp, // --
+    MinusOp, // -
+    ComplementOp, // ~
 
     Eof,
 }
@@ -35,6 +38,9 @@ fn find_keyword_or_symbol(input: &str) -> Option<(Token, &str)> {
     regex_map.insert(r"^\{", Token::LeftBrace);
     regex_map.insert(r"^\}", Token::RightBrace);
     regex_map.insert(r"^;", Token::Semicolon);
+    regex_map.insert(r"^--", Token::DecrementOp);
+    regex_map.insert(r"^-", Token::MinusOp);
+    regex_map.insert(r"^~", Token::ComplementOp);
 
     let result = regex_map.iter().find_map(|(regex_str, token)| {
         let regex = Regex::new(regex_str).unwrap();
