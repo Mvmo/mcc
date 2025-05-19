@@ -94,7 +94,7 @@ fn parse_factor_expression(tokens: &mut Tokens) -> Expression {
     let next_token = tokens.front().expect("Parser | Expect token but didn't have one");
     match next_token {
         Token::Const(_) => return Expression::Const(parse_int(tokens)),
-        Token::ComplementOp | Token::MinusOp => return Expression::Unary { operator: parse_unary_operator(tokens), inner_expression: Box::new(parse_expression(tokens, 0)) },
+        Token::ComplementOp | Token::MinusOp => return Expression::Unary { operator: parse_unary_operator(tokens), inner_expression: Box::new(parse_factor_expression(tokens)) },
         Token::LeftParen => {
             expect_token(tokens, Token::LeftParen);
             let expr = parse_expression(tokens, 0);
