@@ -75,6 +75,30 @@ fn fixup_conflicting_operands(instruction: AsmInstruction) -> Vec<AsmInstruction
             AsmInstruction::Mov(AsmOperand::Stack(src_offset), AsmOperand::Register(Reg::R10)),
             AsmInstruction::Binary(AsmBinaryOperator::Sub, AsmOperand::Register(Reg::R10), AsmOperand::Stack(dest_offset))
         ],
+        AsmInstruction::Binary(AsmBinaryOperator::And, AsmOperand::Stack(src_offset), AsmOperand::Stack(dest_offset)) => vec![
+            AsmInstruction::Mov(AsmOperand::Stack(src_offset), AsmOperand::Register(Reg::R10)),
+            AsmInstruction::Binary(AsmBinaryOperator::And, AsmOperand::Register(Reg::R10), AsmOperand::Stack(dest_offset))
+        ],
+        AsmInstruction::Binary(AsmBinaryOperator::Xor, AsmOperand::Stack(src_offset), AsmOperand::Stack(dest_offset)) => vec![
+            AsmInstruction::Mov(AsmOperand::Stack(src_offset), AsmOperand::Register(Reg::R10)),
+            AsmInstruction::Binary(AsmBinaryOperator::Xor, AsmOperand::Register(Reg::R10), AsmOperand::Stack(dest_offset))
+        ],
+        AsmInstruction::Binary(AsmBinaryOperator::Or, AsmOperand::Stack(src_offset), AsmOperand::Stack(dest_offset)) => vec![
+            AsmInstruction::Mov(AsmOperand::Stack(src_offset), AsmOperand::Register(Reg::R10)),
+            AsmInstruction::Binary(AsmBinaryOperator::Or, AsmOperand::Register(Reg::R10), AsmOperand::Stack(dest_offset))
+        ],
+        AsmInstruction::Binary(AsmBinaryOperator::Shl, AsmOperand::Stack(src_offset), AsmOperand::Stack(dest_offset)) => vec![
+            AsmInstruction::Mov(AsmOperand::Stack(src_offset), AsmOperand::Register(Reg::CX)),
+            AsmInstruction::Mov(AsmOperand::Stack(dest_offset), AsmOperand::Register(Reg::BX)),
+            AsmInstruction::Binary(AsmBinaryOperator::Shl, AsmOperand::Register(Reg::CL), AsmOperand::Register(Reg::BX)),
+            AsmInstruction::Mov(AsmOperand::Register(Reg::BX), AsmOperand::Stack(dest_offset)),
+        ],
+        AsmInstruction::Binary(AsmBinaryOperator::Shr, AsmOperand::Stack(src_offset), AsmOperand::Stack(dest_offset)) => vec![
+            AsmInstruction::Mov(AsmOperand::Stack(src_offset), AsmOperand::Register(Reg::CX)),
+            AsmInstruction::Mov(AsmOperand::Stack(dest_offset), AsmOperand::Register(Reg::BX)),
+            AsmInstruction::Binary(AsmBinaryOperator::Shr, AsmOperand::Register(Reg::CL), AsmOperand::Register(Reg::BX)),
+            AsmInstruction::Mov(AsmOperand::Register(Reg::BX), AsmOperand::Stack(dest_offset)),
+        ],
         AsmInstruction::Binary(AsmBinaryOperator::Mult, src, AsmOperand::Stack(dest_offset)) => vec![
             AsmInstruction::Mov(AsmOperand::Stack(dest_offset), AsmOperand::Register(Reg::R11)),
             AsmInstruction::Binary(AsmBinaryOperator::Mult, src, AsmOperand::Register(Reg::R11)),
