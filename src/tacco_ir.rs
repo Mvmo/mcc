@@ -1,6 +1,6 @@
 use std::{process, sync::Mutex};
 
-use crate::{lexer::Token, parser::{Expression, FunctionDef, Program, Statement, UnaryOperator}};
+use crate::parser::{Expression, FunctionDef, Program, Statement, UnaryOperator};
 
 pub struct TaccoProgram {
     pub function_definition: TaccoFunctionDef,
@@ -65,7 +65,8 @@ fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruc
             into.push(TaccoInstruction::Unary{ operator: tacco_operator, src, dest: dest.clone() });
 
             return dest
-        }
+        },
+        _ => process::exit(4),
     }
 }
 

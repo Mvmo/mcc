@@ -20,12 +20,26 @@ pub enum UnaryOperator {
 }
 
 #[derive(Debug, Clone)]
+pub enum BinaryOperator {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Remainder,
+}
+
+#[derive(Debug, Clone)]
 pub enum Expression {
     Const(i32),
     Unary {
         operator: UnaryOperator,
         inner_expression: Box<Expression>
     },
+    Binary {
+        operator: BinaryOperator,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -76,33 +90,73 @@ fn parse_identifier(tokens: &mut Tokens) -> String {
     process::exit(2);
 }
 
-fn parse_expression(tokens: &mut Tokens) -> Expression {
-    let ts = tokens.clone();
-    let current_token = ts.front().unwrap(); // TODO: remove unwrap
-
-    return match current_token {
-        Token::Const(_) => Expression::Const(parse_int(tokens)),
-        Token::ComplementOp | Token::MinusOp | Token::DecrementOp => {
-            return Expression::Unary { operator: parse_unary_operator(tokens), inner_expression: Box::new(parse_expression(tokens)) }
-        },
+fn parse_factor_expression(tokens: &mut Tokens) -> Expression {
+    let next_token = tokens.front().expect("Parser | Expect token but didn't have one");
+    match next_token {
+        Token::Const(_) => return Expression::Const(parse_int(tokens)),
+        Token::ComplementOp | Token::MinusOp => return Expression::Unary { operator: parse_unary_operator(tokens), inner_expression: Box::new(parse_expression(tokens, 0)) },
         Token::LeftParen => {
             expect_token(tokens, Token::LeftParen);
-            let expr = parse_expression(tokens);
+            let expr = parse_expression(tokens, 0);
             expect_token(tokens, Token::RightParen);
 
             return expr;
-        }
-        _ => {
-            process::exit(2);
-        }
+        },
+        _ => process::exit(2),
+    }
+}
+
+fn parse_expression(tokens: &mut Tokens, min_prec: i32) -> Expression {
+    let mut left_expr = parse_factor_expression(tokens);
+
+    let mut next_token = tokens.front().cloned().expect("Parser | Expect token but didn't have one.");
+    while is_binary_operator(&next_token) && precedence(&next_token) >= min_prec {
+        let operator = parse_binary_operator(tokens);
+        let right_expr = parse_expression(tokens, precedence(&next_token) + 1);
+        left_expr = Expression::Binary { operator, left: Box::new(left_expr), right: Box::new(right_expr) };
+        next_token = tokens.front().cloned().expect("Parser | Expect next token but didn't have one.");
+    }
+
+    return left_expr
+}
+
+fn precedence(token: &Token) -> i32 {
+    return match token {
+        Token::MultiplyOp | Token::DivideOp | Token::RemainderOp => 50,
+        Token::MinusOp | Token::PlusOp => 45,
+        _ => process::exit(2),
     }
 }
 
 fn parse_unary_operator(tokens: &mut Tokens) -> UnaryOperator {
     let operator_token = tokens.pop_front().expect("Parser | Expect token but didn't get one.");
-    match operator_token {
+    return match operator_token {
         Token::ComplementOp => UnaryOperator::Complement,
         Token::MinusOp => UnaryOperator::Negate,
+        _ => process::exit(2),
+    }
+}
+
+fn is_binary_operator(token: &Token) -> bool {
+    return match token {
+        Token::MinusOp
+        | Token::PlusOp
+        | Token::MultiplyOp
+        | Token::DivideOp
+        | Token::RemainderOp
+        => true,
+        _ => false,
+    }
+}
+
+fn parse_binary_operator(tokens: &mut Tokens) -> BinaryOperator {
+    let operator_token = tokens.pop_front().expect("Parser | Expect token but didn't get one.");
+    return match operator_token {
+        Token::MinusOp => BinaryOperator::Subtract,
+        Token::PlusOp => BinaryOperator::Add,
+        Token::MultiplyOp => BinaryOperator::Multiply,
+        Token::DivideOp => BinaryOperator::Divide,
+        Token::RemainderOp => BinaryOperator::Remainder,
         _ => process::exit(2),
     }
 }
@@ -118,7 +172,7 @@ fn parse_int(tokens: &mut Tokens) -> i32 {
 
 fn parse_statement(tokens: &mut Tokens) -> Statement {
     expect_token(tokens, Token::Return);
-    let return_value = parse_expression(tokens);
+    let return_value = parse_expression(tokens, 0);
     expect_token(tokens, Token::Semicolon);
     return Statement::Return(return_value)
 }
