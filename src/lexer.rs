@@ -20,6 +20,10 @@ pub enum Token {
     DecrementOp, // --
     MinusOp, // -
     ComplementOp, // ~
+    PlusOp, // +
+    MultiplyOp, // *
+    DivideOp, // /
+    RemainderOp, // %
 
     Eof,
 }
@@ -41,6 +45,10 @@ fn find_keyword_or_symbol(input: &str) -> Option<(Token, &str)> {
     regex_map.insert(r"^--", Token::DecrementOp);
     regex_map.insert(r"^-", Token::MinusOp);
     regex_map.insert(r"^~", Token::ComplementOp);
+    regex_map.insert(r"^\+", Token::PlusOp);
+    regex_map.insert(r"^\*", Token::MultiplyOp);
+    regex_map.insert(r"^\/", Token::DivideOp);
+    regex_map.insert(r"^%", Token::RemainderOp);
 
     let result = regex_map.iter().find_map(|(regex_str, token)| {
         let regex = Regex::new(regex_str).unwrap();
