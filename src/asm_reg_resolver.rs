@@ -26,7 +26,13 @@ pub fn resolve_pseudo_registers(asm_program: &AsmProgram) -> AsmProgram {
     let mut transformed_instructions = asm_program.function_definition.instructions
         .iter()
         .map(|instruction| match instruction {
-            AsmInstruction::Ret | AsmInstruction::AllocateStack(_) | AsmInstruction::Cdq => instruction.clone(),
+            AsmInstruction::Ret
+            | AsmInstruction::AllocateStack(_)
+            | AsmInstruction::Jmp(_)
+            | AsmInstruction::JmpCC(_, _)
+            | AsmInstruction::Label(_)
+            | AsmInstruction::Cdq
+            => instruction.clone(),
             AsmInstruction::Mov(src, dest) => AsmInstruction::Mov(
                 resolve(&src, &mut identifier_address_map, &mut offset),
                 resolve(&dest, &mut identifier_address_map, &mut offset),
@@ -42,6 +48,14 @@ pub fn resolve_pseudo_registers(asm_program: &AsmProgram) -> AsmProgram {
             ),
             AsmInstruction::Idiv(src) => AsmInstruction::Idiv(
                 resolve(&src, &mut identifier_address_map, &mut offset),
+            ),
+            AsmInstruction::Cmp(src_1, src_2) => AsmInstruction::Cmp(
+                resolve(&src_1, &mut identifier_address_map, &mut offset),
+                resolve(&src_2, &mut identifier_address_map, &mut offset),
+            ),
+            AsmInstruction::SetCC(cond_code, dest) => AsmInstruction::SetCC(
+                cond_code.clone(),
+                resolve(&dest, &mut identifier_address_map, &mut offset),
             ),
         })
         .flat_map(fixup_conflicting_operands)
@@ -103,6 +117,14 @@ fn fixup_conflicting_operands(instruction: AsmInstruction) -> Vec<AsmInstruction
             AsmInstruction::Mov(AsmOperand::Stack(dest_offset), AsmOperand::Register(Reg::R11)),
             AsmInstruction::Binary(AsmBinaryOperator::Mult, src, AsmOperand::Register(Reg::R11)),
             AsmInstruction::Mov(AsmOperand::Register(Reg::R11), AsmOperand::Stack(dest_offset)),
+        ],
+        AsmInstruction::Cmp(AsmOperand::Stack(val_1_offset), AsmOperand::Stack(val_2_offset)) => vec![
+            AsmInstruction::Mov(AsmOperand::Stack(val_1_offset), AsmOperand::Register(Reg::R10)),
+            AsmInstruction::Cmp(AsmOperand::Register(Reg::R10), AsmOperand::Stack(val_2_offset)),
+        ],
+        AsmInstruction::Cmp(val_1, AsmOperand::Imm(int_value)) => vec![
+            AsmInstruction::Mov(AsmOperand::Imm(int_value), AsmOperand::Register(Reg::R11)),
+            AsmInstruction::Cmp(val_1, AsmOperand::Register(Reg::R11)),
         ],
         _ => vec![instruction]
     }

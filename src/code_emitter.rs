@@ -77,6 +77,7 @@ fn write_instruction(lines: &mut Vec<String>, instruction: AsmInstruction) {
         AsmInstruction::Idiv(operand) => lines.push(format!("
             idivl {}
         ", translate_operand(operand))),
+        _ => todo!()
     }
 }
 
