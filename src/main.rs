@@ -34,6 +34,7 @@ fn main() {
 
     let tokens = lexer::tokenize(preprocessed);
     if compiler_args.lex {
+        println!("{:?}", tokens);
         process::exit(0);
     }
 
