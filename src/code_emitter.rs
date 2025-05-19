@@ -56,6 +56,21 @@ fn write_instruction(lines: &mut Vec<String>, instruction: AsmInstruction) {
         AsmInstruction::Binary(AsmBinaryOperator::Mult, operand_1, operand_2) => lines.push(format!("
             imull {}, {}
         ", translate_operand(operand_1), translate_operand(operand_2))),
+        AsmInstruction::Binary(AsmBinaryOperator::And, operand_1, operand_2) => lines.push(format!("
+            andl {}, {}
+        ", translate_operand(operand_1), translate_operand(operand_2))),
+        AsmInstruction::Binary(AsmBinaryOperator::Xor, operand_1, operand_2) => lines.push(format!("
+            xorl {}, {}
+        ", translate_operand(operand_1), translate_operand(operand_2))),
+        AsmInstruction::Binary(AsmBinaryOperator::Or, operand_1, operand_2) => lines.push(format!("
+            orl {}, {}
+        ", translate_operand(operand_1), translate_operand(operand_2))),
+        AsmInstruction::Binary(AsmBinaryOperator::Shl, operand_1, operand_2) => lines.push(format!("
+            sall {}, {}
+        ", translate_operand(operand_1), translate_operand(operand_2))),
+        AsmInstruction::Binary(AsmBinaryOperator::Shr, operand_1, operand_2) => lines.push(format!("
+            sarl {}, {}
+        ", translate_operand(operand_1), translate_operand(operand_2))),
         AsmInstruction::Cdq => lines.push(format!("
             cdq
         ")),
@@ -68,9 +83,12 @@ fn write_instruction(lines: &mut Vec<String>, instruction: AsmInstruction) {
 fn translate_operand(operand: AsmOperand) -> String {
     match operand {
         AsmOperand::Register(Reg::AX) => format!("%eax"),
+        AsmOperand::Register(Reg::BX) => format!("%ebx"),
+        AsmOperand::Register(Reg::CX) => format!("%ecx"),
         AsmOperand::Register(Reg::DX) => format!("%edx"),
         AsmOperand::Register(Reg::R10) => format!("%r10d"),
         AsmOperand::Register(Reg::R11) => format!("%r11d"),
+        AsmOperand::Register(Reg::CL) => format!("%cl"),
         AsmOperand::Stack(offset) => format!("{}(%rbp)", offset),
         AsmOperand::Imm(int_value) => format!("${}", int_value),
         AsmOperand::Pseudo(_) => process::exit(7)
