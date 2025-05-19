@@ -13,8 +13,8 @@ pub fn resolve_pseudo_registers(asm_program: &AsmProgram) -> AsmProgram {
     ) -> AsmOperand {
         return if let AsmOperand::Pseudo(identifier) = operand {
             if !identifier_address_map.contains_key(identifier) {
-                identifier_address_map.insert(identifier.clone(), *offset);
                 *offset = *offset - 4;
+                identifier_address_map.insert(identifier.clone(), *offset);
             }
 
             AsmOperand::Stack(*identifier_address_map.get(identifier).unwrap())
