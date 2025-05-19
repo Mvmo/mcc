@@ -132,6 +132,7 @@ fn translate_instruction(instruction: &TaccoInstruction) -> Vec<AsmInstruction> 
                 translate_operand(dest),
             )
         ],
+        _ => process::exit(70) // TODO remove
     }
 }
 
@@ -146,6 +147,7 @@ fn translate_unary_operator(operator: &TaccoUnaryOperator) -> AsmUnaryOperator {
     return match operator {
         TaccoUnaryOperator::Complement => AsmUnaryOperator::Not,
         TaccoUnaryOperator::Negate => AsmUnaryOperator::Neg,
+        _ => process::exit(70) // TODO remove
     }
 }
 

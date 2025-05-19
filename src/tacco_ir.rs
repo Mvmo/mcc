@@ -2,6 +2,9 @@ use std::{process, sync::Mutex};
 
 use crate::parser::{BinaryOperator, Expression, FunctionDef, Program, Statement, UnaryOperator};
 
+static TRUE_VALUE: TaccoVal = TaccoVal::Constant(1);
+static FALSE_VALUE: TaccoVal = TaccoVal::Constant(1);
+
 #[derive(Debug, Clone)]
 pub struct TaccoProgram {
     pub function_definition: TaccoFunctionDef,
@@ -26,7 +29,12 @@ pub enum TaccoInstruction {
         src_1: TaccoVal,
         src_2: TaccoVal,
         dest: TaccoVal,
-    }
+    },
+    Copy(TaccoVal, TaccoVal),
+    Jump(String),
+    JumpIfZero(TaccoVal, String),
+    JumpIfNotZero(TaccoVal, String),
+    Label(String)
 }
 
 #[derive(Debug, Clone)]
@@ -39,6 +47,7 @@ pub enum TaccoVal {
 pub enum TaccoUnaryOperator {
     Complement,
     Negate,
+    Not,
 }
 
 #[derive(Debug, Clone)]
@@ -53,6 +62,12 @@ pub enum TaccoBinaryOperator {
     BitwiseXor,
     BitwiseLeftShift,
     BitwiseRightShift,
+    Equal,
+    NotEqual,
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
 }
 
 pub fn transform(program: Program) -> TaccoProgram {
@@ -91,6 +106,69 @@ fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruc
 
             return dest
         },
+        Expression::Binary { operator: BinaryOperator::LogicalAnd, left, right } => {
+            let left_val = emit_transform_expression(left.as_ref().clone(), into);
+
+            let left_var_name = generate_temp_name();
+            let left_var = TaccoVal::Var(left_var_name);
+
+            let false_label = generate_label("false_label");
+            let end_label = generate_label("false_label");
+
+            into.push(TaccoInstruction::Copy(left_val, left_var.clone()));
+            into.push(TaccoInstruction::JumpIfZero(left_var, false_label.clone()));
+
+            let right_val = emit_transform_expression(right.as_ref().clone(), into);
+
+            let right_var_name = generate_temp_name();
+            let right_var = TaccoVal::Var(right_var_name);
+
+            into.push(TaccoInstruction::Copy(right_val, right_var.clone()));
+            into.push(TaccoInstruction::JumpIfZero(right_var, false_label.clone()));
+
+            let result_var_name = generate_temp_name();
+            let result_var = TaccoVal::Var(result_var_name);
+
+            into.push(TaccoInstruction::Copy(TRUE_VALUE.clone(), result_var.clone()));
+            into.push(TaccoInstruction::Jump(end_label.clone()));
+
+            into.push(TaccoInstruction::Label(false_label));
+            into.push(TaccoInstruction::Copy(FALSE_VALUE.clone(), result_var.clone()));
+
+            into.push(TaccoInstruction::Label(end_label.clone()));
+
+            return result_var
+        },
+        Expression::Binary { operator: BinaryOperator::LogicalOr, left, right } => {
+            let left_val = emit_transform_expression(left.as_ref().clone(), into);
+
+            let left_var_name = generate_temp_name();
+            let left_var = TaccoVal::Var(left_var_name);
+
+            into.push(TaccoInstruction::Copy(left_val, left_var.clone()));
+            into.push(TaccoInstruction::JumpIfNotZero(left_var, "false_label".to_string()));
+
+            let right_val = emit_transform_expression(right.as_ref().clone(), into);
+
+            let right_var_name = generate_temp_name();
+            let right_var = TaccoVal::Var(right_var_name);
+
+            into.push(TaccoInstruction::Copy(right_val, right_var.clone()));
+            into.push(TaccoInstruction::JumpIfNotZero(right_var, "false_label".to_string()));
+
+            let result_var_name = generate_temp_name();
+            let result_var = TaccoVal::Var(result_var_name);
+
+            into.push(TaccoInstruction::Copy(TRUE_VALUE.clone(), result_var.clone()));
+            into.push(TaccoInstruction::Jump("end".to_string()));
+
+            into.push(TaccoInstruction::Label("false_label".to_string()));
+            into.push(TaccoInstruction::Copy(FALSE_VALUE.clone(), result_var.clone()));
+
+            into.push(TaccoInstruction::Label("end".to_string()));
+
+            return result_var
+        },
         Expression::Binary { operator, left, right } => {
             let src_1 = emit_transform_expression(left.as_ref().clone(), into);
             let src_2 = emit_transform_expression(right.as_ref().clone(), into);
@@ -119,7 +197,13 @@ fn transform_binary_operator(binary_operator: BinaryOperator) -> TaccoBinaryOper
         BinaryOperator::BitwiseOr => TaccoBinaryOperator::BitwiseOr,
         BinaryOperator::BitwiseLeftShift => TaccoBinaryOperator::BitwiseLeftShift,
         BinaryOperator::BitwiseRightShift => TaccoBinaryOperator::BitwiseRightShift,
-        _ => process::exit(5) // TODO remove
+        BinaryOperator::Equal => TaccoBinaryOperator::Equal,
+        BinaryOperator::NotEqual => TaccoBinaryOperator::NotEqual,
+        BinaryOperator::LessThan => TaccoBinaryOperator::LessThan,
+        BinaryOperator::LessThanOrEqual => TaccoBinaryOperator::LessThanOrEqual,
+        BinaryOperator::GreaterThan => TaccoBinaryOperator::GreaterThan,
+        BinaryOperator::GreaterThanOrEqual => TaccoBinaryOperator::GreaterThanOrEqual,
+        BinaryOperator::LogicalAnd | BinaryOperator::LogicalOr => process::exit(6)
     }
 }
 
@@ -127,7 +211,7 @@ fn transform_unary_operator(unary_operator: UnaryOperator) -> TaccoUnaryOperator
     return match unary_operator {
         UnaryOperator::Complement => TaccoUnaryOperator::Complement,
         UnaryOperator::Negate => TaccoUnaryOperator::Negate,
-        _ => process::exit(5) // TODO remove
+        UnaryOperator::Not => TaccoUnaryOperator::Not,
     }
 }
 
@@ -139,4 +223,12 @@ fn generate_temp_name() -> String {
 
     *count = *count + 1;
     return format!("temp.{}", *count)
+}
+
+fn generate_label(label: &str) -> String {
+    let mut count = TMP_COUNT.lock()
+        .expect("IR Tacco Transform | Couldn't lock the TMP_COUNTER");
+
+    *count = *count + 1;
+    return format!("_mcc__{}__{}", label, *count)
 }
