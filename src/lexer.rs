@@ -32,6 +32,12 @@ pub enum Token {
     LogicalNot, // !
     LogicalAnd, // &&
     LogicalOr, // ||
+    Equal, // ==
+    NotEqual, // !=
+    LessThan, // <
+    LessThanOrEqual, // <=
+    GreaterThan, // >
+    GreaterThanOrEqual, // >=
 
     Eof,
 }
@@ -63,7 +69,13 @@ fn find_keyword_or_symbol(input: &str) -> Option<(Token, &str)> {
     regexes_and_tokens.push((r"^\^", Token::BitwiseXor));
     regexes_and_tokens.push((r"^<<", Token::BitwiseLeftShift));
     regexes_and_tokens.push((r"^>>", Token::BitwiseRightShift));
+    regexes_and_tokens.push((r"^!=", Token::NotEqual));
     regexes_and_tokens.push((r"^!", Token::LogicalNot));
+    regexes_and_tokens.push((r"^==", Token::Equal));
+    regexes_and_tokens.push((r"^<=", Token::LessThanOrEqual));
+    regexes_and_tokens.push((r"^>=", Token::GreaterThanOrEqual));
+    regexes_and_tokens.push((r"^<", Token::LessThan));
+    regexes_and_tokens.push((r"^>", Token::GreaterThan));
 
     let result = regexes_and_tokens
         .iter()
