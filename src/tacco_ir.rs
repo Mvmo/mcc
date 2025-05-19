@@ -48,6 +48,11 @@ pub enum TaccoBinaryOperator {
     Multiply,
     Divide,
     Remainder,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
+    BitwiseLeftShift,
+    BitwiseRightShift,
 }
 
 pub fn transform(program: Program) -> TaccoProgram {
@@ -109,6 +114,11 @@ fn transform_binary_operator(binary_operator: BinaryOperator) -> TaccoBinaryOper
         BinaryOperator::Multiply => TaccoBinaryOperator::Multiply,
         BinaryOperator::Divide => TaccoBinaryOperator::Divide,
         BinaryOperator::Remainder => TaccoBinaryOperator::Remainder,
+        BinaryOperator::BitwiseAnd => TaccoBinaryOperator::BitwiseAnd,
+        BinaryOperator::BitwiseXor => TaccoBinaryOperator::BitwiseXor,
+        BinaryOperator::BitwiseOr => TaccoBinaryOperator::BitwiseOr,
+        BinaryOperator::BitwiseLeftShift => TaccoBinaryOperator::BitwiseLeftShift,
+        BinaryOperator::BitwiseRightShift => TaccoBinaryOperator::BitwiseRightShift,
     }
 }
 
