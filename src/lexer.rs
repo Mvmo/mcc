@@ -24,6 +24,11 @@ pub enum Token {
     MultiplyOp, // *
     DivideOp, // /
     RemainderOp, // %
+    BitwiseAnd, // &
+    BitwiseOr, // |
+    BitwiseXor, // ^
+    BitwiseLeftShift, // <<
+    BitwiseRightShift, // >>
 
     Eof,
 }
@@ -49,6 +54,11 @@ fn find_keyword_or_symbol(input: &str) -> Option<(Token, &str)> {
     regex_map.insert(r"^\*", Token::MultiplyOp);
     regex_map.insert(r"^\/", Token::DivideOp);
     regex_map.insert(r"^%", Token::RemainderOp);
+    regex_map.insert(r"^\&", Token::BitwiseAnd);
+    regex_map.insert(r"^\|", Token::BitwiseOr);
+    regex_map.insert(r"^\^", Token::BitwiseXor);
+    regex_map.insert(r"^<<", Token::BitwiseLeftShift);
+    regex_map.insert(r"^>>", Token::BitwiseRightShift);
 
     let result = regex_map.iter().find_map(|(regex_str, token)| {
         let regex = Regex::new(regex_str).unwrap();
