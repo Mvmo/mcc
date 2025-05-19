@@ -55,6 +55,7 @@ fn main() {
     );
 
     if compiler_args.codegen {
+        println!("{:?}", asm_program);
         process::exit(0);
     }
 
