@@ -16,7 +16,8 @@ pub struct Program {
 #[derive(Debug, Clone)]
 pub enum UnaryOperator {
     Complement,
-    Negate
+    Negate,
+    Not,
 }
 
 #[derive(Debug, Clone)]
@@ -31,6 +32,14 @@ pub enum BinaryOperator {
     BitwiseXor,
     BitwiseLeftShift,
     BitwiseRightShift,
+    LogicalAnd,
+    LogicalOr,
+    Equal,
+    NotEqual,
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
 }
 
 #[derive(Debug, Clone)]
@@ -99,7 +108,7 @@ fn parse_factor_expression(tokens: &mut Tokens) -> Expression {
     let next_token = tokens.front().expect("Parser | Expect token but didn't have one");
     match next_token {
         Token::Const(_) => return Expression::Const(parse_int(tokens)),
-        Token::ComplementOp | Token::MinusOp => return Expression::Unary { operator: parse_unary_operator(tokens), inner_expression: Box::new(parse_factor_expression(tokens)) },
+        Token::ComplementOp | Token::MinusOp | Token::LogicalNot => return Expression::Unary { operator: parse_unary_operator(tokens), inner_expression: Box::new(parse_factor_expression(tokens)) },
         Token::LeftParen => {
             expect_token(tokens, Token::LeftParen);
             let expr = parse_expression(tokens, 0);
@@ -130,9 +139,13 @@ fn precedence(token: &Token) -> i32 {
         Token::MultiplyOp | Token::DivideOp | Token::RemainderOp => 50,
         Token::PlusOp | Token::MinusOp => 45,
         Token::BitwiseLeftShift | Token::BitwiseRightShift => 40,
-        Token::BitwiseAnd => 35,
+        Token::LessThan | Token::LessThanOrEqual | Token::GreaterThan | Token::GreaterThanOrEqual => 38,
+        Token::Equal | Token::NotEqual => 36,
+        Token::BitwiseAnd => 32,
         Token::BitwiseXor => 30,
-        Token::BitwiseOr => 25,
+        Token::BitwiseOr => 28,
+        Token::LogicalAnd => 24,
+        Token::LogicalOr => 22,
         _ => process::exit(2),
     }
 }
@@ -142,6 +155,7 @@ fn parse_unary_operator(tokens: &mut Tokens) -> UnaryOperator {
     return match operator_token {
         Token::ComplementOp => UnaryOperator::Complement,
         Token::MinusOp => UnaryOperator::Negate,
+        Token::LogicalNot => UnaryOperator::Not,
         _ => process::exit(2),
     }
 }
@@ -158,6 +172,14 @@ fn is_binary_operator(token: &Token) -> bool {
         | Token::BitwiseOr
         | Token::BitwiseLeftShift
         | Token::BitwiseRightShift
+        | Token::LogicalAnd
+        | Token::LogicalOr
+        | Token::Equal
+        | Token::NotEqual
+        | Token::LessThan
+        | Token::LessThanOrEqual
+        | Token::GreaterThan
+        | Token::GreaterThanOrEqual
         => true,
         _ => false,
     }
@@ -176,6 +198,14 @@ fn parse_binary_operator(tokens: &mut Tokens) -> BinaryOperator {
         Token::BitwiseOr => BinaryOperator::BitwiseOr,
         Token::BitwiseLeftShift => BinaryOperator::BitwiseLeftShift,
         Token::BitwiseRightShift => BinaryOperator::BitwiseRightShift,
+        Token::LogicalAnd => BinaryOperator::LogicalAnd,
+        Token::LogicalOr => BinaryOperator::LogicalOr,
+        Token::Equal => BinaryOperator::Equal,
+        Token::NotEqual => BinaryOperator::NotEqual,
+        Token::LessThan => BinaryOperator::LessThan,
+        Token::LessThanOrEqual => BinaryOperator::LessThanOrEqual,
+        Token::GreaterThan => BinaryOperator::GreaterThan,
+        Token::GreaterThanOrEqual => BinaryOperator::GreaterThanOrEqual,
         _ => process::exit(2),
     }
 }

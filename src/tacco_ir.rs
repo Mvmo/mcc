@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::{process, sync::Mutex};
 
 use crate::parser::{BinaryOperator, Expression, FunctionDef, Program, Statement, UnaryOperator};
 
@@ -119,6 +119,7 @@ fn transform_binary_operator(binary_operator: BinaryOperator) -> TaccoBinaryOper
         BinaryOperator::BitwiseOr => TaccoBinaryOperator::BitwiseOr,
         BinaryOperator::BitwiseLeftShift => TaccoBinaryOperator::BitwiseLeftShift,
         BinaryOperator::BitwiseRightShift => TaccoBinaryOperator::BitwiseRightShift,
+        _ => process::exit(5) // TODO remove
     }
 }
 
@@ -126,6 +127,7 @@ fn transform_unary_operator(unary_operator: UnaryOperator) -> TaccoUnaryOperator
     return match unary_operator {
         UnaryOperator::Complement => TaccoUnaryOperator::Complement,
         UnaryOperator::Negate => TaccoUnaryOperator::Negate,
+        _ => process::exit(5) // TODO remove
     }
 }
 
