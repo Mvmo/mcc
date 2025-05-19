@@ -1,16 +1,19 @@
-use std::{process, sync::Mutex};
+use std::sync::Mutex;
 
-use crate::parser::{Expression, FunctionDef, Program, Statement, UnaryOperator};
+use crate::parser::{BinaryOperator, Expression, FunctionDef, Program, Statement, UnaryOperator};
 
+#[derive(Debug, Clone)]
 pub struct TaccoProgram {
     pub function_definition: TaccoFunctionDef,
 }
 
+#[derive(Debug, Clone)]
 pub struct TaccoFunctionDef {
     pub identifier: String, // TODO rename to name
     pub body: Vec<TaccoInstruction>,
 }
 
+#[derive(Debug, Clone)]
 pub enum TaccoInstruction {
     Return(TaccoVal),
     Unary {
@@ -18,17 +21,33 @@ pub enum TaccoInstruction {
         src: TaccoVal,
         dest: TaccoVal,
     },
+    Binary {
+        operator: TaccoBinaryOperator,
+        src_1: TaccoVal,
+        src_2: TaccoVal,
+        dest: TaccoVal,
+    }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum TaccoVal {
     Constant(i32),
     Var(String),
 }
 
+#[derive(Debug, Clone)]
 pub enum TaccoUnaryOperator {
     Complement,
-    Negate
+    Negate,
+}
+
+#[derive(Debug, Clone)]
+pub enum TaccoBinaryOperator {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Remainder,
 }
 
 pub fn transform(program: Program) -> TaccoProgram {
@@ -54,7 +73,7 @@ fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruc
     match expression {
         Expression::Const(int_value) => {
             return TaccoVal::Constant(int_value)
-        }
+        },
         Expression::Unary { operator, inner_expression } => {
             let src = emit_transform_expression(inner_expression.as_ref().clone(), into);
 
@@ -62,11 +81,34 @@ fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruc
             let dest = TaccoVal::Var(dest_name);
 
             let tacco_operator = transform_unary_operator(operator);
+
             into.push(TaccoInstruction::Unary{ operator: tacco_operator, src, dest: dest.clone() });
 
             return dest
         },
-        _ => process::exit(4),
+        Expression::Binary { operator, left, right } => {
+            let src_1 = emit_transform_expression(left.as_ref().clone(), into);
+            let src_2 = emit_transform_expression(right.as_ref().clone(), into);
+
+            let dest_name = generate_temp_name();
+            let dest = TaccoVal::Var(dest_name);
+
+            let tacco_operator = transform_binary_operator(operator);
+
+            into.push(TaccoInstruction::Binary{ operator: tacco_operator, src_1, src_2, dest: dest.clone() });
+
+            return dest;
+        }
+    }
+}
+
+fn transform_binary_operator(binary_operator: BinaryOperator) -> TaccoBinaryOperator {
+    return match binary_operator {
+        BinaryOperator::Add => TaccoBinaryOperator::Add,
+        BinaryOperator::Subtract => TaccoBinaryOperator::Subtract,
+        BinaryOperator::Multiply => TaccoBinaryOperator::Multiply,
+        BinaryOperator::Divide => TaccoBinaryOperator::Divide,
+        BinaryOperator::Remainder => TaccoBinaryOperator::Remainder,
     }
 }
 

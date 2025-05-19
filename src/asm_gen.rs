@@ -1,3 +1,5 @@
+use std::process;
+
 use crate::tacco_ir::{TaccoFunctionDef, TaccoInstruction, TaccoProgram, TaccoUnaryOperator, TaccoVal};
 
 #[derive(Debug, Clone)]
@@ -70,7 +72,8 @@ fn translate_instruction(instruction: &TaccoInstruction) -> Vec<AsmInstruction> 
                 translate_unary_operator(operator),
                 translate_operand(dest),
             )
-        ]
+        ],
+        _ => process::exit(6),
     }
 }
 
