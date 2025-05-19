@@ -27,9 +27,12 @@ pub enum AsmInstruction {
 #[derive(Debug, Clone)]
 pub enum Reg {
     AX,
+    BX,
+    CX,
     DX,
     R10,
     R11,
+    CL,
 }
 
 #[derive(Debug, Clone)]
@@ -50,7 +53,12 @@ pub enum AsmUnaryOperator {
 pub enum AsmBinaryOperator {
     Add,
     Sub,
-    Mult
+    Mult,
+    And,
+    Or,
+    Xor,
+    Shl,
+    Shr,
 }
 
 pub fn generate(program: TaccoProgram) -> AsmProgram {
@@ -146,6 +154,11 @@ fn translate_binary_operator(operator: &TaccoBinaryOperator) -> AsmBinaryOperato
         TaccoBinaryOperator::Add => AsmBinaryOperator::Add,
         TaccoBinaryOperator::Subtract => AsmBinaryOperator::Sub,
         TaccoBinaryOperator::Multiply => AsmBinaryOperator::Mult,
+        TaccoBinaryOperator::BitwiseAnd => AsmBinaryOperator::And,
+        TaccoBinaryOperator::BitwiseXor => AsmBinaryOperator::Xor,
+        TaccoBinaryOperator::BitwiseOr => AsmBinaryOperator::Or,
+        TaccoBinaryOperator::BitwiseLeftShift => AsmBinaryOperator::Shl,
+        TaccoBinaryOperator::BitwiseRightShift => AsmBinaryOperator::Shr,
         _ => process::exit(7),
     }
 }
