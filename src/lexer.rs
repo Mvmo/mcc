@@ -37,39 +37,40 @@ pub enum Token {
 }
 
 fn find_keyword_or_symbol(input: &str) -> Option<(Token, &str)> {
-    let mut regex_map = HashMap::new();
+    let mut regexes_and_tokens = Vec::<(&str, Token)>::new();
 
     // keywords
-    regex_map.insert(r"^int\b", Token::Int);
-    regex_map.insert(r"^void\b", Token::Void);
-    regex_map.insert(r"^return\b", Token::Return);
+    regexes_and_tokens.push((r"^int\b", Token::Int));
+    regexes_and_tokens.push((r"^void\b", Token::Void));
+    regexes_and_tokens.push((r"^return\b", Token::Return));
 
-    // symbols
-    regex_map.insert(r"^\(", Token::LeftParen);
-    regex_map.insert(r"^\)", Token::RightParen);
-    regex_map.insert(r"^\{", Token::LeftBrace);
-    regex_map.insert(r"^\}", Token::RightBrace);
-    regex_map.insert(r"^;", Token::Semicolon);
-    regex_map.insert(r"^--", Token::DecrementOp);
-    regex_map.insert(r"^-", Token::MinusOp);
-    regex_map.insert(r"^~", Token::ComplementOp);
-    regex_map.insert(r"^\+", Token::PlusOp);
-    regex_map.insert(r"^\*", Token::MultiplyOp);
-    regex_map.insert(r"^\/", Token::DivideOp);
-    regex_map.insert(r"^%", Token::RemainderOp);
-    regex_map.insert(r"^\&&", Token::LogicalAnd);
-    regex_map.insert(r"^\&", Token::BitwiseAnd);
-    regex_map.insert(r"^\|\|", Token::LogicalOr);
-    regex_map.insert(r"^\|", Token::BitwiseOr);
-    regex_map.insert(r"^\^", Token::BitwiseXor);
-    regex_map.insert(r"^<<", Token::BitwiseLeftShift);
-    regex_map.insert(r"^>>", Token::BitwiseRightShift);
-    regex_map.insert(r"^!", Token::LogicalNot);
+    regexes_and_tokens.push((r"^\(", Token::LeftParen));
+    regexes_and_tokens.push((r"^\)", Token::RightParen));
+    regexes_and_tokens.push((r"^\{", Token::LeftBrace));
+    regexes_and_tokens.push((r"^\}", Token::RightBrace));
+    regexes_and_tokens.push((r"^;", Token::Semicolon));
+    regexes_and_tokens.push((r"^--", Token::DecrementOp));
+    regexes_and_tokens.push((r"^-", Token::MinusOp));
+    regexes_and_tokens.push((r"^~", Token::ComplementOp));
+    regexes_and_tokens.push((r"^\+", Token::PlusOp));
+    regexes_and_tokens.push((r"^\*", Token::MultiplyOp));
+    regexes_and_tokens.push((r"^\/", Token::DivideOp));
+    regexes_and_tokens.push((r"^%", Token::RemainderOp));
+    regexes_and_tokens.push((r"^\&&", Token::LogicalAnd));
+    regexes_and_tokens.push((r"^\&", Token::BitwiseAnd));
+    regexes_and_tokens.push((r"^\|\|", Token::LogicalOr));
+    regexes_and_tokens.push((r"^\|", Token::BitwiseOr));
+    regexes_and_tokens.push((r"^\^", Token::BitwiseXor));
+    regexes_and_tokens.push((r"^<<", Token::BitwiseLeftShift));
+    regexes_and_tokens.push((r"^>>", Token::BitwiseRightShift));
+    regexes_and_tokens.push((r"^!", Token::LogicalNot));
 
-    let result = regex_map.iter().find_map(|(regex_str, token)| {
-        let regex = Regex::new(regex_str).unwrap();
-        regex.find(input).map(|value| (token, value))
-    });
+    let result = regexes_and_tokens
+        .iter()
+        .find_map(|(regex_str, token)| {
+            let regex = Regex::new(regex_str).unwrap();
+            regex.find(input).map(|value| (token, value))
+        });
 
     if let Some(value) = result {
         return Some((
