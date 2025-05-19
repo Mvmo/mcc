@@ -39,11 +39,13 @@ fn main() {
 
     let program = parser::parse(tokens);
     if compiler_args.parse {
+        println!("{:?}", program);
         process::exit(0);
     }
 
     let tacco_ir_program = tacco_ir::transform(program.clone());
     if compiler_args.tacco {
+        println!("{:?}", tacco_ir_program);
         process::exit(0);
     }
 
