@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, fmt, process};
+use std::{collections::VecDeque, process};
 
 use crate::lexer::Token;
 
@@ -14,10 +14,16 @@ pub struct Program {
 }
 
 #[derive(Debug, Clone)]
+pub enum UnaryOperator {
+    Complement,
+    Negate
+}
+
+#[derive(Debug, Clone)]
 pub enum Expression {
     Const(i32),
     Unary {
-        operator: Token,
+        operator: UnaryOperator,
         inner_expression: Box<Expression>
     },
 }
@@ -77,8 +83,7 @@ fn parse_expression(tokens: &mut Tokens) -> Expression {
     return match current_token {
         Token::Const(_) => Expression::Const(parse_int(tokens)),
         Token::ComplementOp | Token::MinusOp | Token::DecrementOp => {
-            tokens.pop_front();
-            return Expression::Unary { operator: current_token.clone(), inner_expression: Box::new(parse_expression(tokens)) }
+            return Expression::Unary { operator: parse_unary_operator(tokens), inner_expression: Box::new(parse_expression(tokens)) }
         },
         Token::LeftParen => {
             expect_token(tokens, Token::LeftParen);
@@ -90,6 +95,15 @@ fn parse_expression(tokens: &mut Tokens) -> Expression {
         _ => {
             process::exit(2);
         }
+    }
+}
+
+fn parse_unary_operator(tokens: &mut Tokens) -> UnaryOperator {
+    let operator_token = tokens.pop_front().expect("Parser | Expect token but didn't get one.");
+    match operator_token {
+        Token::ComplementOp => UnaryOperator::Complement,
+        Token::MinusOp => UnaryOperator::Negate,
+        _ => process::exit(2),
     }
 }
 

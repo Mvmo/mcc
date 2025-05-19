@@ -1,6 +1,6 @@
 use std::{process, sync::Mutex};
 
-use crate::{lexer::Token, parser::{Expression, FunctionDef, Program, Statement}};
+use crate::{lexer::Token, parser::{Expression, FunctionDef, Program, Statement, UnaryOperator}};
 
 pub struct TaccoProgram {
     pub function_definition: TaccoFunctionDef,
@@ -69,11 +69,10 @@ fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruc
     }
 }
 
-fn transform_unary_operator(unary_operator_token: Token) -> TaccoUnaryOperator {
-    return match unary_operator_token {
-        Token::ComplementOp => TaccoUnaryOperator::Complement,
-        Token::MinusOp => TaccoUnaryOperator::Negate,
-        _ => process::exit(7)
+fn transform_unary_operator(unary_operator: UnaryOperator) -> TaccoUnaryOperator {
+    return match unary_operator {
+        UnaryOperator::Complement => TaccoUnaryOperator::Complement,
+        UnaryOperator::Negate => TaccoUnaryOperator::Negate,
     }
 }
 
