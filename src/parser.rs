@@ -26,6 +26,11 @@ pub enum BinaryOperator {
     Multiply,
     Divide,
     Remainder,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
+    BitwiseLeftShift,
+    BitwiseRightShift,
 }
 
 #[derive(Debug, Clone)]
@@ -123,7 +128,11 @@ fn parse_expression(tokens: &mut Tokens, min_prec: i32) -> Expression {
 fn precedence(token: &Token) -> i32 {
     return match token {
         Token::MultiplyOp | Token::DivideOp | Token::RemainderOp => 50,
-        Token::MinusOp | Token::PlusOp => 45,
+        Token::PlusOp | Token::MinusOp => 45,
+        Token::BitwiseLeftShift | Token::BitwiseRightShift => 40,
+        Token::BitwiseAnd => 35,
+        Token::BitwiseXor => 30,
+        Token::BitwiseOr => 25,
         _ => process::exit(2),
     }
 }
@@ -144,6 +153,11 @@ fn is_binary_operator(token: &Token) -> bool {
         | Token::MultiplyOp
         | Token::DivideOp
         | Token::RemainderOp
+        | Token::BitwiseAnd
+        | Token::BitwiseXor
+        | Token::BitwiseOr
+        | Token::BitwiseLeftShift
+        | Token::BitwiseRightShift
         => true,
         _ => false,
     }
@@ -157,6 +171,11 @@ fn parse_binary_operator(tokens: &mut Tokens) -> BinaryOperator {
         Token::MultiplyOp => BinaryOperator::Multiply,
         Token::DivideOp => BinaryOperator::Divide,
         Token::RemainderOp => BinaryOperator::Remainder,
+        Token::BitwiseAnd => BinaryOperator::BitwiseAnd,
+        Token::BitwiseXor => BinaryOperator::BitwiseXor,
+        Token::BitwiseOr => BinaryOperator::BitwiseOr,
+        Token::BitwiseLeftShift => BinaryOperator::BitwiseLeftShift,
+        Token::BitwiseRightShift => BinaryOperator::BitwiseRightShift,
         _ => process::exit(2),
     }
 }
