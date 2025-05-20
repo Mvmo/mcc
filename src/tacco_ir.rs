@@ -145,8 +145,11 @@ fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruc
             let left_var_name = generate_temp_name();
             let left_var = TaccoVal::Var(left_var_name);
 
+            let false_label = generate_label("false_label");
+            let end_label = generate_label("false_label");
+
             into.push(TaccoInstruction::Copy(left_val, left_var.clone()));
-            into.push(TaccoInstruction::JumpIfNotZero(left_var, "false_label".to_string()));
+            into.push(TaccoInstruction::JumpIfNotZero(left_var, false_label.clone()));
 
             let right_val = emit_transform_expression(right.as_ref().clone(), into);
 
@@ -154,18 +157,18 @@ fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruc
             let right_var = TaccoVal::Var(right_var_name);
 
             into.push(TaccoInstruction::Copy(right_val, right_var.clone()));
-            into.push(TaccoInstruction::JumpIfNotZero(right_var, "false_label".to_string()));
+            into.push(TaccoInstruction::JumpIfNotZero(right_var, false_label.clone()));
 
             let result_var_name = generate_temp_name();
             let result_var = TaccoVal::Var(result_var_name);
 
             into.push(TaccoInstruction::Copy(TRUE_VALUE.clone(), result_var.clone()));
-            into.push(TaccoInstruction::Jump("end".to_string()));
+            into.push(TaccoInstruction::Jump(end_label.clone()));
 
-            into.push(TaccoInstruction::Label("false_label".to_string()));
+            into.push(TaccoInstruction::Label(false_label));
             into.push(TaccoInstruction::Copy(FALSE_VALUE.clone(), result_var.clone()));
 
-            into.push(TaccoInstruction::Label("end".to_string()));
+            into.push(TaccoInstruction::Label(end_label.clone()));
 
             return result_var
         },
