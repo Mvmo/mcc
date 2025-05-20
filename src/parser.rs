@@ -139,13 +139,13 @@ fn precedence(token: &Token) -> i32 {
         Token::MultiplyOp | Token::DivideOp | Token::RemainderOp => 50,
         Token::PlusOp | Token::MinusOp => 45,
         Token::BitwiseLeftShift | Token::BitwiseRightShift => 40,
-        Token::LessThan | Token::LessThanOrEqual | Token::GreaterThan | Token::GreaterThanOrEqual => 38,
-        Token::Equal | Token::NotEqual => 36,
+        Token::LessThan | Token::LessThanOrEqual | Token::GreaterThan | Token::GreaterThanOrEqual => 35,
+        Token::Equal | Token::NotEqual => 34,
         Token::BitwiseAnd => 32,
         Token::BitwiseXor => 30,
         Token::BitwiseOr => 28,
-        Token::LogicalAnd => 24,
-        Token::LogicalOr => 22,
+        Token::LogicalAnd => 10,
+        Token::LogicalOr => 5,
         _ => process::exit(2),
     }
 }

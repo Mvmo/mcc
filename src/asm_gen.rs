@@ -1,6 +1,6 @@
 use std::process;
 
-use crate::{parser::BinaryOperator, tacco_ir::{TaccoBinaryOperator, TaccoFunctionDef, TaccoInstruction, TaccoProgram, TaccoUnaryOperator, TaccoVal}};
+use crate::tacco_ir::{TaccoBinaryOperator, TaccoFunctionDef, TaccoInstruction, TaccoProgram, TaccoUnaryOperator, TaccoVal};
 
 #[derive(Debug, Clone)]
 pub struct AsmProgram {
@@ -26,7 +26,7 @@ pub enum AsmInstruction {
     SetCC(AsmCondCode, AsmOperand),
     Label(String),
     AllocateStack(i32),
-    Ret
+    Ret,
 }
 
 #[derive(Debug, Clone)]
@@ -39,6 +39,19 @@ pub enum AsmCondCode {
     LE
 }
 
+impl ToString for AsmCondCode {
+    fn to_string(&self) -> String {
+        match self {
+            AsmCondCode::E => "e",
+            AsmCondCode::NE => "ne",
+            AsmCondCode::G => "g",
+            AsmCondCode::GE => "ge",
+            AsmCondCode::L => "l",
+            AsmCondCode::LE => "le",
+        }.to_string()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Reg {
     AX,
@@ -49,6 +62,21 @@ pub enum Reg {
     R11,
     CL,
 }
+
+impl Reg {
+    pub fn one_byte_alias(&self) -> String {
+        match self {
+            Reg::AX => "al",
+            Reg::BX => "bl",
+            Reg::CX => "cl",
+            Reg::DX => "dl",
+            Reg::R10 => "r10b",
+            Reg::R11 => "r11b",
+            Reg::CL => "cl",
+        }.to_string()
+    }
+}
+
 
 #[derive(Debug, Clone)]
 pub enum AsmOperand {
@@ -98,6 +126,20 @@ fn translate_instruction(instruction: &TaccoInstruction) -> Vec<AsmInstruction> 
             ),
             AsmInstruction::Ret
         ],
+        TaccoInstruction::Unary { operator: TaccoUnaryOperator::Not, src, dest } => vec![
+            AsmInstruction::Cmp(
+                AsmOperand::Imm(0),
+                translate_operand(src),
+            ),
+            AsmInstruction::Mov(
+                AsmOperand::Imm(0),
+                translate_operand(dest),
+            ),
+            AsmInstruction::SetCC(
+                AsmCondCode::E,
+                translate_operand(dest),
+            ),
+        ],
         TaccoInstruction::Unary { operator, src, dest } => vec![
             AsmInstruction::Mov(
                 translate_operand(src),
@@ -136,53 +178,23 @@ fn translate_instruction(instruction: &TaccoInstruction) -> Vec<AsmInstruction> 
                 translate_operand(dest)
             ),
         ],
-        TaccoInstruction::Binary { operator: TaccoBinaryOperator::Equal, src_1, src_2, dest } => vec![
+        TaccoInstruction::Binary {
+            operator: op @ TaccoBinaryOperator::GreaterThan
+                    | op @ TaccoBinaryOperator::LessThan
+                    | op @ TaccoBinaryOperator::GreaterThanOrEqual
+                    | op @ TaccoBinaryOperator::LessThanOrEqual
+                    | op @ TaccoBinaryOperator::Equal
+                    | op @ TaccoBinaryOperator::NotEqual,
+            src_1,
+            src_2,
+            dest
+        } => vec![
             AsmInstruction::Cmp(
                 translate_operand(src_2),
                 translate_operand(src_1),
             ),
             AsmInstruction::Mov(AsmOperand::Imm(0), translate_operand(dest)),
-            AsmInstruction::SetCC(AsmCondCode::E, translate_operand(dest)),
-        ],
-        TaccoInstruction::Binary { operator: TaccoBinaryOperator::NotEqual, src_1, src_2, dest } => vec![
-            AsmInstruction::Cmp(
-                translate_operand(src_2),
-                translate_operand(src_1),
-            ),
-            AsmInstruction::Mov(AsmOperand::Imm(0), translate_operand(dest)),
-            AsmInstruction::SetCC(AsmCondCode::NE, translate_operand(dest)),
-        ],
-        TaccoInstruction::Binary { operator: TaccoBinaryOperator::LessThan, src_1, src_2, dest } => vec![
-            AsmInstruction::Cmp(
-                translate_operand(src_2),
-                translate_operand(src_1),
-            ),
-            AsmInstruction::Mov(AsmOperand::Imm(0), translate_operand(dest)),
-            AsmInstruction::SetCC(AsmCondCode::L, translate_operand(dest)),
-        ],
-        TaccoInstruction::Binary { operator: TaccoBinaryOperator::LessThanOrEqual, src_1, src_2, dest } => vec![
-            AsmInstruction::Cmp(
-                translate_operand(src_2),
-                translate_operand(src_1),
-            ),
-            AsmInstruction::Mov(AsmOperand::Imm(0), translate_operand(dest)),
-            AsmInstruction::SetCC(AsmCondCode::LE, translate_operand(dest)),
-        ],
-        TaccoInstruction::Binary { operator: TaccoBinaryOperator::GreaterThan, src_1, src_2, dest } => vec![
-            AsmInstruction::Cmp(
-                translate_operand(src_2),
-                translate_operand(src_1),
-            ),
-            AsmInstruction::Mov(AsmOperand::Imm(0), translate_operand(dest)),
-            AsmInstruction::SetCC(AsmCondCode::G, translate_operand(dest)),
-        ],
-        TaccoInstruction::Binary { operator: TaccoBinaryOperator::GreaterThanOrEqual, src_1, src_2, dest } => vec![
-            AsmInstruction::Cmp(
-                translate_operand(src_2),
-                translate_operand(src_1),
-            ),
-            AsmInstruction::Mov(AsmOperand::Imm(0), translate_operand(dest)),
-            AsmInstruction::SetCC(AsmCondCode::GE, translate_operand(dest)),
+            AsmInstruction::SetCC(translate_cond_code(op), translate_operand(dest)),
         ],
         TaccoInstruction::Binary { operator, src_1, src_2, dest } => vec![
             AsmInstruction::Mov(
@@ -230,6 +242,18 @@ fn translate_unary_operator(operator: &TaccoUnaryOperator) -> AsmUnaryOperator {
         TaccoUnaryOperator::Complement => AsmUnaryOperator::Not,
         TaccoUnaryOperator::Negate => AsmUnaryOperator::Neg,
         TaccoUnaryOperator::Not => AsmUnaryOperator::Not,
+    }
+}
+
+fn translate_cond_code(operator: &TaccoBinaryOperator) -> AsmCondCode {
+    return match operator {
+        TaccoBinaryOperator::Equal => AsmCondCode::E,
+        TaccoBinaryOperator::NotEqual => AsmCondCode::NE,
+        TaccoBinaryOperator::GreaterThan => AsmCondCode::G,
+        TaccoBinaryOperator::LessThanOrEqual => AsmCondCode::LE,
+        TaccoBinaryOperator::GreaterThanOrEqual => AsmCondCode::GE,
+        TaccoBinaryOperator::LessThan => AsmCondCode::L,
+        _ => process::exit(7),
     }
 }
 

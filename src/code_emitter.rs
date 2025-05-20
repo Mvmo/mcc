@@ -77,7 +77,24 @@ fn write_instruction(lines: &mut Vec<String>, instruction: AsmInstruction) {
         AsmInstruction::Idiv(operand) => lines.push(format!("
             idivl {}
         ", translate_operand(operand))),
-        _ => todo!()
+        AsmInstruction::Cmp(operand_1, operand_2) => lines.push(format!("
+            cmpl {}, {}
+        ", translate_operand(operand_1), translate_operand(operand_2))),
+        AsmInstruction::Jmp(label) => lines.push(format!("
+            jmp L{}
+        ", label)),
+        AsmInstruction::JmpCC(cond_code, label) => lines.push(format!("
+            j{} L{}
+        ", cond_code.to_string(), label)),
+        AsmInstruction::SetCC(cond_code, AsmOperand::Register(reg)) => lines.push(format!("
+            set{} {}
+        ", cond_code.to_string(), reg.one_byte_alias())),
+        AsmInstruction::SetCC(cond_code, operand) => lines.push(format!("
+            set{} {}
+        ", cond_code.to_string(), translate_operand(operand))),
+        AsmInstruction::Label(label) => lines.push(format!("
+            L{}:
+        ", label)),
     }
 }
 
