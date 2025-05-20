@@ -1,4 +1,4 @@
-use std::{collections::HashMap, process};
+use std::process;
 use regex::Regex;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
