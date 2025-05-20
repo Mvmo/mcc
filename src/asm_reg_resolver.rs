@@ -3,6 +3,9 @@ use std::collections::HashMap;
 use crate::asm_gen::{AsmBinaryOperator, AsmFunctionDef, AsmInstruction, AsmOperand, AsmProgram, Reg};
 
 pub fn resolve_pseudo_registers(asm_program: &AsmProgram) -> AsmProgram {
+    use AsmInstruction::*;
+    use AsmOperand::*;
+
     let mut identifier_address_map = HashMap::<String, i32>::new();
     let mut offset: i32 = 0;
 
@@ -11,13 +14,13 @@ pub fn resolve_pseudo_registers(asm_program: &AsmProgram) -> AsmProgram {
         identifier_address_map: &mut HashMap<String, i32>,
         offset: &mut i32
     ) -> AsmOperand {
-        return if let AsmOperand::Pseudo(identifier) = operand {
+        return if let Pseudo(identifier) = operand {
             if !identifier_address_map.contains_key(identifier) {
                 *offset = *offset - 4;
                 identifier_address_map.insert(identifier.clone(), *offset);
             }
 
-            AsmOperand::Stack(*identifier_address_map.get(identifier).unwrap())
+            Stack(*identifier_address_map.get(identifier).unwrap())
         } else {
             operand.clone()
         }
@@ -26,34 +29,34 @@ pub fn resolve_pseudo_registers(asm_program: &AsmProgram) -> AsmProgram {
     let mut transformed_instructions = asm_program.function_definition.instructions
         .iter()
         .map(|instruction| match instruction {
-            AsmInstruction::Ret
-            | AsmInstruction::AllocateStack(_)
-            | AsmInstruction::Jmp(_)
-            | AsmInstruction::JmpCC(_, _)
-            | AsmInstruction::Label(_)
-            | AsmInstruction::Cdq
+            Ret
+            | AllocateStack(_)
+            | Jmp(_)
+            | JmpCC(_, _)
+            | Label(_)
+            | Cdq
             => instruction.clone(),
-            AsmInstruction::Mov(src, dest) => AsmInstruction::Mov(
+            Mov(src, dest) => Mov(
                 resolve(&src, &mut identifier_address_map, &mut offset),
                 resolve(&dest, &mut identifier_address_map, &mut offset),
             ),
-            AsmInstruction::Unary(operator, operand) => AsmInstruction::Unary(
+            Unary(operator, operand) => Unary(
                 operator.clone(),
                 resolve(&operand, &mut identifier_address_map, &mut offset),
             ),
-            AsmInstruction::Binary(operator, src_1, src_2) => AsmInstruction::Binary(
+            Binary(operator, src_1, src_2) => Binary(
                 operator.clone(),
                 resolve(&src_1, &mut identifier_address_map, &mut offset),
                 resolve(&src_2, &mut identifier_address_map, &mut offset),
             ),
-            AsmInstruction::Idiv(src) => AsmInstruction::Idiv(
+            Idiv(src) => Idiv(
                 resolve(&src, &mut identifier_address_map, &mut offset),
             ),
-            AsmInstruction::Cmp(src_1, src_2) => AsmInstruction::Cmp(
+            Cmp(src_1, src_2) => Cmp(
                 resolve(&src_1, &mut identifier_address_map, &mut offset),
                 resolve(&src_2, &mut identifier_address_map, &mut offset),
             ),
-            AsmInstruction::SetCC(cond_code, dest) => AsmInstruction::SetCC(
+            SetCC(cond_code, dest) => SetCC(
                 cond_code.clone(),
                 resolve(&dest, &mut identifier_address_map, &mut offset),
             ),
@@ -61,70 +64,74 @@ pub fn resolve_pseudo_registers(asm_program: &AsmProgram) -> AsmProgram {
         .flat_map(fixup_conflicting_operands)
         .collect::<Vec<AsmInstruction>>();
 
-    transformed_instructions.insert(0, AsmInstruction::AllocateStack(-offset));
+    transformed_instructions.insert(0, AllocateStack(-offset));
 
     return AsmProgram { function_definition: AsmFunctionDef { name: asm_program.function_definition.name.clone(), instructions: transformed_instructions } };
 }
 
 fn fixup_conflicting_operands(instruction: AsmInstruction) -> Vec<AsmInstruction> {
+    use AsmInstruction::*;
+    use AsmOperand::*;
+    use AsmBinaryOperator::*;
+
     return match instruction {
-        AsmInstruction::Mov(AsmOperand::Stack(src_offset), AsmOperand::Stack(dest_offset)) => vec![
-            AsmInstruction::Mov(AsmOperand::Stack(src_offset), AsmOperand::Register(Reg::R10)),
-            AsmInstruction::Mov(AsmOperand::Register(Reg::R10), AsmOperand::Stack(dest_offset))
+        Mov(Stack(src_offset), Stack(dest_offset)) => vec![
+            Mov(Stack(src_offset), Register(Reg::R10)),
+            Mov(Register(Reg::R10), Stack(dest_offset))
         ],
-        AsmInstruction::Idiv(AsmOperand::Imm(int_value)) => vec![
-            AsmInstruction::Mov(
-                AsmOperand::Imm(int_value),
-                AsmOperand::Register(Reg::R10),
+        Idiv(Imm(int_value)) => vec![
+            Mov(
+                Imm(int_value),
+                Register(Reg::R10),
             ),
-            AsmInstruction::Idiv(
-                AsmOperand::Register(Reg::R10),
+            Idiv(
+                Register(Reg::R10),
             )
         ],
-        AsmInstruction::Binary(AsmBinaryOperator::Add, AsmOperand::Stack(src_offset), AsmOperand::Stack(dest_offset)) => vec![
-            AsmInstruction::Mov(AsmOperand::Stack(src_offset), AsmOperand::Register(Reg::R10)),
-            AsmInstruction::Binary(AsmBinaryOperator::Add, AsmOperand::Register(Reg::R10), AsmOperand::Stack(dest_offset))
+        Binary(Add, Stack(src_offset), Stack(dest_offset)) => vec![
+            Mov(Stack(src_offset), Register(Reg::R10)),
+            Binary(Add, Register(Reg::R10), Stack(dest_offset))
         ],
-        AsmInstruction::Binary(AsmBinaryOperator::Sub, AsmOperand::Stack(src_offset), AsmOperand::Stack(dest_offset)) => vec![
-            AsmInstruction::Mov(AsmOperand::Stack(src_offset), AsmOperand::Register(Reg::R10)),
-            AsmInstruction::Binary(AsmBinaryOperator::Sub, AsmOperand::Register(Reg::R10), AsmOperand::Stack(dest_offset))
+        Binary(Sub, Stack(src_offset), Stack(dest_offset)) => vec![
+            Mov(Stack(src_offset), Register(Reg::R10)),
+            Binary(Sub, Register(Reg::R10), Stack(dest_offset))
         ],
-        AsmInstruction::Binary(AsmBinaryOperator::And, AsmOperand::Stack(src_offset), AsmOperand::Stack(dest_offset)) => vec![
-            AsmInstruction::Mov(AsmOperand::Stack(src_offset), AsmOperand::Register(Reg::R10)),
-            AsmInstruction::Binary(AsmBinaryOperator::And, AsmOperand::Register(Reg::R10), AsmOperand::Stack(dest_offset))
+        Binary(And, Stack(src_offset), Stack(dest_offset)) => vec![
+            Mov(Stack(src_offset), Register(Reg::R10)),
+            Binary(And, Register(Reg::R10), Stack(dest_offset))
         ],
-        AsmInstruction::Binary(AsmBinaryOperator::Xor, AsmOperand::Stack(src_offset), AsmOperand::Stack(dest_offset)) => vec![
-            AsmInstruction::Mov(AsmOperand::Stack(src_offset), AsmOperand::Register(Reg::R10)),
-            AsmInstruction::Binary(AsmBinaryOperator::Xor, AsmOperand::Register(Reg::R10), AsmOperand::Stack(dest_offset))
+        Binary(Xor, Stack(src_offset), Stack(dest_offset)) => vec![
+            Mov(Stack(src_offset), Register(Reg::R10)),
+            Binary(Xor, Register(Reg::R10), Stack(dest_offset))
         ],
-        AsmInstruction::Binary(AsmBinaryOperator::Or, AsmOperand::Stack(src_offset), AsmOperand::Stack(dest_offset)) => vec![
-            AsmInstruction::Mov(AsmOperand::Stack(src_offset), AsmOperand::Register(Reg::R10)),
-            AsmInstruction::Binary(AsmBinaryOperator::Or, AsmOperand::Register(Reg::R10), AsmOperand::Stack(dest_offset))
+        Binary(Or, Stack(src_offset), Stack(dest_offset)) => vec![
+            Mov(Stack(src_offset), Register(Reg::R10)),
+            Binary(Or, Register(Reg::R10), Stack(dest_offset))
         ],
-        AsmInstruction::Binary(AsmBinaryOperator::Shl, AsmOperand::Stack(src_offset), AsmOperand::Stack(dest_offset)) => vec![
-            AsmInstruction::Mov(AsmOperand::Stack(src_offset), AsmOperand::Register(Reg::CX)),
-            AsmInstruction::Mov(AsmOperand::Stack(dest_offset), AsmOperand::Register(Reg::BX)),
-            AsmInstruction::Binary(AsmBinaryOperator::Shl, AsmOperand::Register(Reg::CL), AsmOperand::Register(Reg::BX)),
-            AsmInstruction::Mov(AsmOperand::Register(Reg::BX), AsmOperand::Stack(dest_offset)),
+        Binary(Shl, Stack(src_offset), Stack(dest_offset)) => vec![
+            Mov(Stack(src_offset), Register(Reg::CX)),
+            Mov(Stack(dest_offset), Register(Reg::BX)),
+            Binary(Shl, Register(Reg::CL), Register(Reg::BX)),
+            Mov(Register(Reg::BX), Stack(dest_offset)),
         ],
-        AsmInstruction::Binary(AsmBinaryOperator::Shr, AsmOperand::Stack(src_offset), AsmOperand::Stack(dest_offset)) => vec![
-            AsmInstruction::Mov(AsmOperand::Stack(src_offset), AsmOperand::Register(Reg::CX)),
-            AsmInstruction::Mov(AsmOperand::Stack(dest_offset), AsmOperand::Register(Reg::BX)),
-            AsmInstruction::Binary(AsmBinaryOperator::Shr, AsmOperand::Register(Reg::CL), AsmOperand::Register(Reg::BX)),
-            AsmInstruction::Mov(AsmOperand::Register(Reg::BX), AsmOperand::Stack(dest_offset)),
+        Binary(Shr, Stack(src_offset), Stack(dest_offset)) => vec![
+            Mov(Stack(src_offset), Register(Reg::CX)),
+            Mov(Stack(dest_offset), Register(Reg::BX)),
+            Binary(Shr, Register(Reg::CL), Register(Reg::BX)),
+            Mov(Register(Reg::BX), Stack(dest_offset)),
         ],
-        AsmInstruction::Binary(AsmBinaryOperator::Mult, src, AsmOperand::Stack(dest_offset)) => vec![
-            AsmInstruction::Mov(AsmOperand::Stack(dest_offset), AsmOperand::Register(Reg::R11)),
-            AsmInstruction::Binary(AsmBinaryOperator::Mult, src, AsmOperand::Register(Reg::R11)),
-            AsmInstruction::Mov(AsmOperand::Register(Reg::R11), AsmOperand::Stack(dest_offset)),
+        Binary(Mult, src, Stack(dest_offset)) => vec![
+            Mov(Stack(dest_offset), Register(Reg::R11)),
+            Binary(Mult, src, Register(Reg::R11)),
+            Mov(Register(Reg::R11), Stack(dest_offset)),
         ],
-        AsmInstruction::Cmp(AsmOperand::Stack(val_1_offset), AsmOperand::Stack(val_2_offset)) => vec![
-            AsmInstruction::Mov(AsmOperand::Stack(val_1_offset), AsmOperand::Register(Reg::R10)),
-            AsmInstruction::Cmp(AsmOperand::Register(Reg::R10), AsmOperand::Stack(val_2_offset)),
+        Cmp(Stack(val_1_offset), Stack(val_2_offset)) => vec![
+            Mov(Stack(val_1_offset), Register(Reg::R10)),
+            Cmp(Register(Reg::R10), Stack(val_2_offset)),
         ],
-        AsmInstruction::Cmp(val_1, AsmOperand::Imm(int_value)) => vec![
-            AsmInstruction::Mov(AsmOperand::Imm(int_value), AsmOperand::Register(Reg::R11)),
-            AsmInstruction::Cmp(val_1, AsmOperand::Register(Reg::R11)),
+        Cmp(val_1, Imm(int_value)) => vec![
+            Mov(Imm(int_value), Register(Reg::R11)),
+            Cmp(val_1, Register(Reg::R11)),
         ],
         _ => vec![instruction]
     }
