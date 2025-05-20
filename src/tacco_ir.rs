@@ -3,7 +3,7 @@ use std::{process, sync::Mutex};
 use crate::parser::{BinaryOperator, Expression, FunctionDef, Program, Statement, UnaryOperator};
 
 static TRUE_VALUE: TaccoVal = TaccoVal::Constant(1);
-static FALSE_VALUE: TaccoVal = TaccoVal::Constant(1);
+static FALSE_VALUE: TaccoVal = TaccoVal::Constant(0);
 
 #[derive(Debug, Clone)]
 pub struct TaccoProgram {
@@ -112,8 +112,8 @@ fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruc
             let left_var_name = generate_temp_name();
             let left_var = TaccoVal::Var(left_var_name);
 
-            let false_label = generate_label("false_label");
-            let end_label = generate_label("false_label");
+            let false_label = generate_label("and_false_label");
+            let end_label = generate_label("and_end_label");
 
             into.push(TaccoInstruction::Copy(left_val, left_var.clone()));
             into.push(TaccoInstruction::JumpIfZero(left_var, false_label.clone()));
@@ -145,8 +145,8 @@ fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruc
             let left_var_name = generate_temp_name();
             let left_var = TaccoVal::Var(left_var_name);
 
-            let false_label = generate_label("false_label");
-            let end_label = generate_label("false_label");
+            let false_label = generate_label("or_false_label");
+            let end_label = generate_label("or_end_label");
 
             into.push(TaccoInstruction::Copy(left_val, left_var.clone()));
             into.push(TaccoInstruction::JumpIfNotZero(left_var, false_label.clone()));
@@ -162,11 +162,11 @@ fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruc
             let result_var_name = generate_temp_name();
             let result_var = TaccoVal::Var(result_var_name);
 
-            into.push(TaccoInstruction::Copy(TRUE_VALUE.clone(), result_var.clone()));
+            into.push(TaccoInstruction::Copy(FALSE_VALUE.clone(), result_var.clone()));
             into.push(TaccoInstruction::Jump(end_label.clone()));
 
             into.push(TaccoInstruction::Label(false_label));
-            into.push(TaccoInstruction::Copy(FALSE_VALUE.clone(), result_var.clone()));
+            into.push(TaccoInstruction::Copy(TRUE_VALUE.clone(), result_var.clone()));
 
             into.push(TaccoInstruction::Label(end_label.clone()));
 
