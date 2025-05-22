@@ -59,7 +59,6 @@ fn main() {
         process::exit(0);
     }
 
-
     let output_assembly_file = compiler_args.input_file.with_extension("s");
     code_emitter::emit(asm_program, output_assembly_file.clone());
     assembler::with_gcc(output_assembly_file);
