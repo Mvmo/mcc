@@ -124,6 +124,63 @@ fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruc
         Expression::Const(int_value) => {
             return TaccoVal::Constant(int_value)
         },
+        Expression::Unary {
+            operator: op @ UnaryOperator::Increment { postfix }
+                    | op @ UnaryOperator::Decrement { postfix },
+            inner_expression
+        } => {
+            let inner_value_expr = inner_expression.as_ref();
+            let operator = match op {
+                UnaryOperator::Increment { postfix: _ } => BinaryOperator::Add,
+                UnaryOperator::Decrement { postfix: _ } => BinaryOperator::Subtract,
+                _ => unreachable!(),
+            };
+
+            if !matches!(inner_value_expr, Expression::Var(_)) {
+                println!("Tacco IR Generation | Can only use increment operator for variables");
+                process::exit(84093);
+            }
+
+            let var_name_string = match inner_value_expr {
+                Expression::Var(var_name) => var_name,
+                _ => unreachable!(),
+            };
+
+            let var_value = TaccoVal::Var(var_name_string.clone());
+
+            if postfix {
+                let original_val_temp_name = generate_temp_name();
+                let original_val_temp_value = TaccoVal::Var(original_val_temp_name.clone());
+
+                into.push(TaccoInstruction::Copy(var_value.clone(), original_val_temp_value.clone()));
+
+                let incremented_val_temp_value = emit_transform_expression(
+                    Expression::Binary {
+                        operator,
+                        left: Box::new(inner_value_expr.clone()),
+                        right: Box::new(Expression::Const(1)),
+                    },
+                    into,
+                );
+
+                into.push(TaccoInstruction::Copy(incremented_val_temp_value, var_value));
+
+                return original_val_temp_value;
+            } else {
+                let incremented_val_temp_value = emit_transform_expression(
+                    Expression::Binary {
+                        operator,
+                        left: Box::new(inner_value_expr.clone()),
+                        right: Box::new(Expression::Const(1)),
+                    },
+                    into,
+                );
+
+                into.push(TaccoInstruction::Copy(incremented_val_temp_value.clone(), var_value));
+
+                return incremented_val_temp_value;
+            }
+        },
         Expression::Unary { operator, inner_expression } => {
             let src = emit_transform_expression(inner_expression.as_ref().clone(), into);
 
@@ -280,6 +337,7 @@ fn transform_unary_operator(unary_operator: UnaryOperator) -> TaccoUnaryOperator
         UnaryOperator::Complement => TaccoUnaryOperator::Complement,
         UnaryOperator::Negate => TaccoUnaryOperator::Negate,
         UnaryOperator::Not => TaccoUnaryOperator::Not,
+        _ => process::exit(4809),
     }
 }
 
