@@ -38,6 +38,7 @@ pub enum Token {
     LessThanOrEqual, // <=
     GreaterThan, // >
     GreaterThanOrEqual, // >=
+    Assign,
 
     Eof,
 }
@@ -72,6 +73,7 @@ fn find_keyword_or_symbol(input: &str) -> Option<(Token, &str)> {
     regexes_and_tokens.push((r"^!=", Token::NotEqual));
     regexes_and_tokens.push((r"^!", Token::LogicalNot));
     regexes_and_tokens.push((r"^==", Token::Equal));
+    regexes_and_tokens.push((r"^=", Token::Assign));
     regexes_and_tokens.push((r"^<=", Token::LessThanOrEqual));
     regexes_and_tokens.push((r"^>=", Token::GreaterThanOrEqual));
     regexes_and_tokens.push((r"^<", Token::LessThan));
