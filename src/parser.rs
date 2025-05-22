@@ -30,6 +30,8 @@ pub enum UnaryOperator {
     Complement,
     Negate,
     Not,
+    Increment { postfix: bool },
+    Decrement { postfix: bool },
 }
 
 #[derive(Debug, Clone)]
@@ -170,19 +172,34 @@ fn parse_identifier(tokens: &mut Tokens) -> String {
 fn parse_factor_expression(tokens: &mut Tokens) -> Expression {
     let next_token = tokens.front().expect("Parser | Expect token but didn't have one");
     println!("{:?}", next_token);
-    match next_token {
-        Token::Const(_) => return Expression::Const(parse_int(tokens)),
-        Token::Identifier(_) => return Expression::Var(parse_identifier(tokens)),
-        Token::ComplementOp | Token::MinusOp | Token::LogicalNot => return Expression::Unary { operator: parse_unary_operator(tokens), inner_expression: Box::new(parse_factor_expression(tokens)) },
+    let expression = match next_token {
+        Token::Const(_) => {
+            Expression::Const(parse_int(tokens))
+        },
+        Token::IncrementOp | Token::DecrementOp => Expression::Unary {
+            operator: parse_unary_operator(tokens, false),
+            inner_expression: Box::new(parse_factor_expression(tokens))
+        },
+        Token::Identifier(_) => Expression::Var(parse_identifier(tokens)),
+        Token::ComplementOp | Token::MinusOp | Token::LogicalNot => Expression::Unary {
+            operator: parse_unary_operator(tokens, false),
+            inner_expression: Box::new(parse_factor_expression(tokens))
+        },
         Token::LeftParen => {
             expect_token(tokens, Token::LeftParen);
             let expr = parse_expression(tokens, 0);
             expect_token(tokens, Token::RightParen);
 
-            return expr;
+            expr
         },
         _ => process::exit(9),
+    };
+
+    if let Some(Token::IncrementOp | Token::DecrementOp) = tokens.front() {
+        return Expression::Unary { operator: parse_unary_operator(tokens, true), inner_expression: Box::new(expression) }
     }
+
+    expression
 }
 
 fn parse_expression(tokens: &mut Tokens, min_prec: i32) -> Expression {
@@ -250,12 +267,14 @@ fn precedence(token: &Token) -> i32 {
     }
 }
 
-fn parse_unary_operator(tokens: &mut Tokens) -> UnaryOperator {
+fn parse_unary_operator(tokens: &mut Tokens, postfix: bool) -> UnaryOperator {
     let operator_token = tokens.pop_front().expect("Parser | Expect token but didn't get one.");
     return match operator_token {
         Token::ComplementOp => UnaryOperator::Complement,
         Token::MinusOp => UnaryOperator::Negate,
         Token::LogicalNot => UnaryOperator::Not,
+        Token::IncrementOp => UnaryOperator::Increment { postfix },
+        Token::DecrementOp => UnaryOperator::Decrement { postfix },
         _ => process::exit(2),
     }
 }
