@@ -55,6 +55,23 @@ pub enum BinaryOperator {
 }
 
 #[derive(Debug, Clone)]
+pub enum AssignmentOperator {
+    Plus,
+    Minus,
+    Multiply,
+    Divide,
+    Remainder,
+    LeftShift,
+    RightShift,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
+}
+
+impl AssignmentOperator {
+}
+
+#[derive(Debug, Clone)]
 pub enum Expression {
     Const(i32),
     Var(String),
@@ -67,7 +84,7 @@ pub enum Expression {
         left: Box<Expression>,
         right: Box<Expression>,
     },
-    Assignment(Box<Expression>, Box<Expression>)
+    Assignment(Option<AssignmentOperator>, Box<Expression>, Box<Expression>)
 }
 
 #[derive(Debug, Clone)]
@@ -173,10 +190,10 @@ fn parse_expression(tokens: &mut Tokens, min_prec: i32) -> Expression {
 
     let mut next_token = tokens.front().cloned().expect("Parser | Expect token but didn't have one.");
     while is_binary_operator(&next_token) && precedence(&next_token) >= min_prec {
-        if next_token == Token::Assign {
-            expect_token(tokens, Token::Assign);
+        if is_assignment_operator(&next_token) {
+            let assignment_operator = parse_assignment_operator(tokens);
             let right_expr = parse_expression(tokens, precedence(&next_token));
-            left_expr = Expression::Assignment(Box::new(left_expr), Box::new(right_expr));
+            left_expr = Expression::Assignment(assignment_operator, Box::new(left_expr), Box::new(right_expr));
         } else {
             let operator = parse_binary_operator(tokens);
             let right_expr = parse_expression(tokens, precedence(&next_token) + 1);
@@ -186,6 +203,23 @@ fn parse_expression(tokens: &mut Tokens, min_prec: i32) -> Expression {
     }
 
     return left_expr
+}
+
+fn is_assignment_operator(token: &Token) -> bool {
+    return matches!(
+        token,
+        Token::Assign
+        | Token::PlusAssign
+        | Token::MinusAssign
+        | Token::MultiplyAssign
+        | Token::DivideAssign
+        | Token::RemainderAssign
+        | Token::LeftShiftAssign
+        | Token::RightShiftAssign
+        | Token::BitwiseAndAssign
+        | Token::BitwiseOrAssign
+        | Token::BitwiseXorAssign
+    )
 }
 
 fn precedence(token: &Token) -> i32 {
@@ -200,7 +234,18 @@ fn precedence(token: &Token) -> i32 {
         Token::BitwiseOr => 28,
         Token::LogicalAnd => 10,
         Token::LogicalOr => 5,
-        Token::Assign => 1,
+        Token::Assign
+        | Token::PlusAssign
+        | Token::MinusAssign
+        | Token::MultiplyAssign
+        | Token::DivideAssign
+        | Token::RemainderAssign
+        | Token::LeftShiftAssign
+        | Token::RightShiftAssign
+        | Token::BitwiseAndAssign
+        | Token::BitwiseOrAssign
+        | Token::BitwiseXorAssign
+        => 1,
         _ => process::exit(2),
     }
 }
@@ -236,8 +281,36 @@ fn is_binary_operator(token: &Token) -> bool {
         | Token::GreaterThan
         | Token::GreaterThanOrEqual
         | Token::Assign
+        | Token::PlusAssign
+        | Token::MinusAssign
+        | Token::MultiplyAssign
+        | Token::DivideAssign
+        | Token::RemainderAssign
+        | Token::LeftShiftAssign
+        | Token::RightShiftAssign
+        | Token::BitwiseAndAssign
+        | Token::BitwiseOrAssign
+        | Token::BitwiseXorAssign
         => true,
         _ => false,
+    }
+}
+
+fn parse_assignment_operator(tokens: &mut Tokens) -> Option<AssignmentOperator> {
+    let assignment_token = tokens.pop_front().unwrap(); // todo remove unwrap
+    match assignment_token {
+        Token::Assign => None,
+        Token::PlusAssign => Some(AssignmentOperator::Plus),
+        Token::MinusAssign => Some(AssignmentOperator::Minus),
+        Token::MultiplyAssign => Some(AssignmentOperator::Multiply),
+        Token::DivideAssign => Some(AssignmentOperator::Divide),
+        Token::RemainderAssign => Some(AssignmentOperator::Remainder),
+        Token::LeftShiftAssign => Some(AssignmentOperator::LeftShift),
+        Token::RightShiftAssign => Some(AssignmentOperator::RightShift),
+        Token::BitwiseAndAssign => Some(AssignmentOperator::BitwiseAnd),
+        Token::BitwiseOrAssign => Some(AssignmentOperator::BitwiseOr),
+        Token::BitwiseXorAssign => Some(AssignmentOperator::BitwiseXor),
+        _ => process::exit(890),
     }
 }
 
