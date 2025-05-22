@@ -76,7 +76,7 @@ pub fn transform(program: Program) -> TaccoProgram {
 
 fn transform_function_definition(function_definition: FunctionDef) -> TaccoFunctionDef {
     let mut instructions = Vec::<TaccoInstruction>::new();
-    emit_statement(function_definition.body, &mut instructions);
+    // emit_statement(function_definition.body, &mut instructions);
     return TaccoFunctionDef { identifier: function_definition.name, body: instructions }
 }
 
@@ -85,7 +85,8 @@ fn emit_statement(statement: Statement, into: &mut Vec<TaccoInstruction>) {
         Statement::Return(expression) => {
             let value = emit_transform_expression(expression, into);
             into.push(TaccoInstruction::Return(value));
-        }
+        },
+        _ => todo!(),
     }
 }
 
@@ -184,7 +185,8 @@ fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruc
             into.push(TaccoInstruction::Binary{ operator: tacco_operator, src_1, src_2, dest: dest.clone() });
 
             return dest;
-        }
+        },
+        _ => todo!(),
     }
 }
 

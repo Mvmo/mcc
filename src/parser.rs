@@ -5,12 +5,24 @@ use crate::lexer::Token;
 #[derive(Debug, Clone)]
 pub struct FunctionDef {
     pub name: String,
-    pub body: Statement,
+    pub body: Vec<BlockItem>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Program {
     pub function_definition: FunctionDef,
+}
+
+#[derive(Debug, Clone)]
+pub enum BlockItem {
+    Statement(Statement),
+    Declaration(Declaration),
+}
+
+#[derive(Debug, Clone)]
+pub struct Declaration {
+    pub name: String,
+    pub initializer: Option<Expression>,
 }
 
 #[derive(Debug, Clone)]
@@ -45,6 +57,7 @@ pub enum BinaryOperator {
 #[derive(Debug, Clone)]
 pub enum Expression {
     Const(i32),
+    Var(String),
     Unary {
         operator: UnaryOperator,
         inner_expression: Box<Expression>
@@ -53,12 +66,15 @@ pub enum Expression {
         operator: BinaryOperator,
         left: Box<Expression>,
         right: Box<Expression>,
-    }
+    },
+    Assignment(Box<Expression>, Box<Expression>)
 }
 
 #[derive(Debug, Clone)]
 pub enum Statement {
     Return(Expression),
+    Expression(Expression),
+    Null,
 }
 
 type Tokens = VecDeque<Token>;
@@ -79,19 +95,49 @@ fn parse_program(tokens: &mut Tokens) -> Program {
     }
 }
 
+fn parse_block_item(tokens: &mut Tokens) -> BlockItem {
+    let next_token = tokens.front().expect("Parser | Expected token but didn't get one");
+    return match next_token {
+        Token::Int => BlockItem::Declaration(parse_declaration(tokens)),
+        _ => BlockItem::Statement(parse_statement(tokens)),
+    }
+}
+
+fn parse_declaration(tokens: &mut Tokens) -> Declaration {
+    expect_token(tokens, Token::Int);
+    let identifier = parse_identifier(tokens);
+
+    let mut init_expr = None;
+    let next_token_opt = tokens.front();
+    if let Some(Token::Assign) = next_token_opt {
+        expect_token(tokens, Token::Assign);
+        init_expr = Some(parse_expression(tokens, 0));
+    }
+
+    expect_token(tokens, Token::Semicolon);
+    return Declaration { name: identifier, initializer: init_expr }
+}
+
 fn parse_function(tokens: &mut Tokens) -> FunctionDef {
     expect_token(tokens, Token::Int);
     let identifier = parse_identifier(tokens);
     expect_token(tokens, Token::LeftParen);
     expect_token(tokens, Token::Void);
     expect_token(tokens, Token::RightParen);
+
     expect_token(tokens, Token::LeftBrace);
-    let statement = parse_statement(tokens);
+
+    let mut block_items = Vec::<BlockItem>::new();
+    while *tokens.front().unwrap() != Token::RightBrace {
+        let block_item = parse_block_item(tokens);
+        block_items.push(block_item);
+    }
+
     expect_token(tokens, Token::RightBrace);
 
     FunctionDef {
         name: identifier,
-        body: statement
+        body: block_items,
     }
 }
 
@@ -101,13 +147,15 @@ fn parse_identifier(tokens: &mut Tokens) -> String {
         return value
     }
 
-    process::exit(2);
+    process::exit(4);
 }
 
 fn parse_factor_expression(tokens: &mut Tokens) -> Expression {
     let next_token = tokens.front().expect("Parser | Expect token but didn't have one");
+    println!("{:?}", next_token);
     match next_token {
         Token::Const(_) => return Expression::Const(parse_int(tokens)),
+        Token::Identifier(_) => return Expression::Var(parse_identifier(tokens)),
         Token::ComplementOp | Token::MinusOp | Token::LogicalNot => return Expression::Unary { operator: parse_unary_operator(tokens), inner_expression: Box::new(parse_factor_expression(tokens)) },
         Token::LeftParen => {
             expect_token(tokens, Token::LeftParen);
@@ -116,7 +164,7 @@ fn parse_factor_expression(tokens: &mut Tokens) -> Expression {
 
             return expr;
         },
-        _ => process::exit(2),
+        _ => process::exit(9),
     }
 }
 
@@ -125,9 +173,15 @@ fn parse_expression(tokens: &mut Tokens, min_prec: i32) -> Expression {
 
     let mut next_token = tokens.front().cloned().expect("Parser | Expect token but didn't have one.");
     while is_binary_operator(&next_token) && precedence(&next_token) >= min_prec {
-        let operator = parse_binary_operator(tokens);
-        let right_expr = parse_expression(tokens, precedence(&next_token) + 1);
-        left_expr = Expression::Binary { operator, left: Box::new(left_expr), right: Box::new(right_expr) };
+        if next_token == Token::Assign {
+            expect_token(tokens, Token::Assign);
+            let right_expr = parse_expression(tokens, precedence(&next_token));
+            left_expr = Expression::Assignment(Box::new(left_expr), Box::new(right_expr));
+        } else {
+            let operator = parse_binary_operator(tokens);
+            let right_expr = parse_expression(tokens, precedence(&next_token) + 1);
+            left_expr = Expression::Binary { operator, left: Box::new(left_expr), right: Box::new(right_expr) };
+        }
         next_token = tokens.front().cloned().expect("Parser | Expect next token but didn't have one.");
     }
 
@@ -146,6 +200,7 @@ fn precedence(token: &Token) -> i32 {
         Token::BitwiseOr => 28,
         Token::LogicalAnd => 10,
         Token::LogicalOr => 5,
+        Token::Assign => 1,
         _ => process::exit(2),
     }
 }
@@ -180,6 +235,7 @@ fn is_binary_operator(token: &Token) -> bool {
         | Token::LessThanOrEqual
         | Token::GreaterThan
         | Token::GreaterThanOrEqual
+        | Token::Assign
         => true,
         _ => false,
     }
@@ -206,7 +262,7 @@ fn parse_binary_operator(tokens: &mut Tokens) -> BinaryOperator {
         Token::LessThanOrEqual => BinaryOperator::LessThanOrEqual,
         Token::GreaterThan => BinaryOperator::GreaterThan,
         Token::GreaterThanOrEqual => BinaryOperator::GreaterThanOrEqual,
-        _ => process::exit(2),
+        _ => process::exit(5),
     }
 }
 
@@ -216,20 +272,34 @@ fn parse_int(tokens: &mut Tokens) -> i32 {
         return int_value
     }
 
-    process::exit(2);
+    process::exit(8);
 }
 
 fn parse_statement(tokens: &mut Tokens) -> Statement {
-    expect_token(tokens, Token::Return);
-    let return_value = parse_expression(tokens, 0);
+    let next_token = tokens.front().expect("Parser | Expected token but didn't get one.");
+    if *next_token == Token::Return {
+        expect_token(tokens, Token::Return);
+        let return_value = parse_expression(tokens, 0);
+        expect_token(tokens, Token::Semicolon);
+        return Statement::Return(return_value)
+    }
+
+    if *next_token == Token::Semicolon {
+        expect_token(tokens, Token::Semicolon);
+        return Statement::Null;
+    }
+
+    let expression = parse_expression(tokens, 0);
     expect_token(tokens, Token::Semicolon);
-    return Statement::Return(return_value)
+
+    return Statement::Expression(expression);
 }
 
 fn expect_token(tokens: &mut Tokens, expected: Token) -> Token {
     let token_option = tokens.pop_front();
     if token_option.as_ref().is_none_or(|token| *token != expected) {
-        process::exit(2);
+        println!("Expected token {:?} but got {:?}", expected, token_option);
+        process::exit(9);
     }
 
     return token_option.unwrap();
