@@ -6,7 +6,7 @@ pub fn emit(asm_program: AsmProgram, to: PathBuf) {
     let mut lines = Vec::new();
     write_program(&mut lines, asm_program);
 
-    if fs::write(to, lines.join("\n")).is_err() {
+    if fs::write(to, format_asm(&lines).join("\n")).is_err() {
         process::exit(4);
     }
 }
@@ -93,7 +93,7 @@ fn write_instruction(lines: &mut Vec<String>, instruction: AsmInstruction) {
             set{} {}
         ", cond_code.to_string(), translate_operand(operand))),
         AsmInstruction::Label(label) => lines.push(format!("
-            L{}:
+        L{}:
         ", label)),
     }
 }
@@ -111,4 +111,20 @@ fn translate_operand(operand: AsmOperand) -> String {
         AsmOperand::Imm(int_value) => format!("${}", int_value),
         AsmOperand::Pseudo(_) => process::exit(7)
     }
+}
+
+pub fn format_asm(lines: &Vec<String>) -> Vec<String> {
+    lines.iter()
+        .flat_map(|line| line.split('\n'))
+        .filter(|line| !line.trim().is_empty())
+        .map(|inner_line| {
+            let trimmed = inner_line.trim();
+
+            if trimmed.ends_with(':') {
+                trimmed.to_string()
+            } else {
+                format!("   {}", trimmed)
+            }
+        })
+        .collect()
 }
