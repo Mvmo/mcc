@@ -7,11 +7,12 @@ pub enum Token {
     Const(i32),
 
     // Keywords
-    Int,
-    Void,
-    Return,
-    If,
-    Else,
+    Int, // int
+    Void, // void
+    Return, // return
+    If, // if
+    Else, // else
+    Goto, // goto
 
     // Symbols
     LeftParen, // (
@@ -67,6 +68,8 @@ fn find_keyword_or_symbol(input: &str) -> Option<(Token, &str)> {
     regexes_and_tokens.push((r"^return\b", Token::Return));
     regexes_and_tokens.push((r"^if\b", Token::If));
     regexes_and_tokens.push((r"^else\b", Token::Else));
+    regexes_and_tokens.push((r"^int\b", Token::Int));
+    regexes_and_tokens.push((r"^goto\b", Token::Goto));
 
     regexes_and_tokens.push((r"^\(", Token::LeftParen));
     regexes_and_tokens.push((r"^\)", Token::RightParen));
