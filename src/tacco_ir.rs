@@ -112,11 +112,46 @@ fn emit_statement(statement: Statement, into: &mut Vec<TaccoInstruction>) {
             let value = emit_transform_expression(expression, into);
             into.push(TaccoInstruction::Return(value));
         },
+        Statement::If { condition, then, _else: None } => {
+            let condition_result = emit_transform_expression(condition, into);
+
+            let result_var_name = generate_temp_name();
+            let result_var = TaccoVal::Var(result_var_name);
+
+            let end_label = generate_label("if_end_label");
+
+            into.push(TaccoInstruction::Copy(condition_result, result_var.clone()));
+            into.push(TaccoInstruction::JumpIfZero(result_var, end_label.clone()));
+
+            emit_statement(then.as_ref().clone(), into);
+
+            into.push(TaccoInstruction::Label(end_label));
+        },
+        Statement::If { condition, then, _else: Some(else_statement) } => {
+            let condition_result = emit_transform_expression(condition, into);
+
+            let result_var_name = generate_temp_name();
+            let result_var = TaccoVal::Var(result_var_name);
+
+            let end_label = generate_label("if_end_label");
+            let else_label = generate_label("else_label");
+
+            into.push(TaccoInstruction::Copy(condition_result, result_var.clone()));
+            into.push(TaccoInstruction::JumpIfZero(result_var, else_label.clone()));
+
+            emit_statement(then.as_ref().clone(), into);
+
+            into.push(TaccoInstruction::Jump(end_label.clone()));
+            into.push(TaccoInstruction::Label(else_label));
+
+            emit_statement(else_statement.as_ref().clone(), into);
+
+            into.push(TaccoInstruction::Label(end_label));
+        }
         Statement::Expression(expression) => {
             emit_transform_expression(expression, into);
         },
         Statement::Null => {},
-        _ => todo!(),
     }
 }
 
@@ -293,7 +328,45 @@ fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruc
 
             process::exit(10);
         },
-        _ => todo!(),
+        Expression::Conditional { condition, if_true, _else } => {
+            let condition_result = emit_transform_expression(condition.as_ref().clone(), into);
+
+            let result_var_name = generate_temp_name();
+            let result_var = TaccoVal::Var(result_var_name);
+
+            let final_result_var_name = generate_temp_name();
+            let final_result_var = TaccoVal::Var(final_result_var_name);
+
+            into.push(TaccoInstruction::Copy(condition_result, result_var.clone()));
+
+            let end_label = generate_label("conditional_end_label");
+            let second_label = generate_label("conditional_second_label");
+
+            into.push(TaccoInstruction::JumpIfZero(result_var, second_label.clone()));
+
+            let one_result = emit_transform_expression(if_true.as_ref().clone(), into);
+
+            let one_var_name = generate_temp_name();
+            let one_var = TaccoVal::Var(one_var_name);
+
+            into.push(TaccoInstruction::Copy(one_result, one_var.clone()));
+            into.push(TaccoInstruction::Copy(one_var, final_result_var.clone()));
+            into.push(TaccoInstruction::Jump(end_label.clone()));
+
+            into.push(TaccoInstruction::Label(second_label));
+
+            let second_result = emit_transform_expression(_else.as_ref().clone(), into);
+
+            let second_var_name = generate_temp_name();
+            let second_var = TaccoVal::Var(second_var_name);
+
+            into.push(TaccoInstruction::Copy(second_result, second_var.clone()));
+            into.push(TaccoInstruction::Copy(second_var, final_result_var.clone()));
+
+            into.push(TaccoInstruction::Label(end_label));
+
+            return final_result_var
+        }
     }
 }
 
