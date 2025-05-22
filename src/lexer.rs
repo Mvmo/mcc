@@ -38,7 +38,17 @@ pub enum Token {
     LessThanOrEqual, // <=
     GreaterThan, // >
     GreaterThanOrEqual, // >=
-    Assign,
+    Assign, // =
+    PlusAssign, // +=
+    MinusAssign, // -=
+    MultiplyAssign, // *=
+    DivideAssign, // /=
+    RemainderAssign, // %=
+    BitwiseAndAssign, // &=
+    BitwiseOrAssign, // |=
+    BitwiseXorAssign, // ^=
+    LeftShiftAssign, // <<=
+    RightShiftAssign, // >>=
 
     Eof,
 }
@@ -57,18 +67,28 @@ fn find_keyword_or_symbol(input: &str) -> Option<(Token, &str)> {
     regexes_and_tokens.push((r"^\}", Token::RightBrace));
     regexes_and_tokens.push((r"^;", Token::Semicolon));
     regexes_and_tokens.push((r"^--", Token::DecrementOp));
+    regexes_and_tokens.push((r"^-=", Token::MinusAssign));
     regexes_and_tokens.push((r"^-", Token::MinusOp));
     regexes_and_tokens.push((r"^~", Token::ComplementOp));
+    regexes_and_tokens.push((r"^\+=", Token::PlusAssign));
     regexes_and_tokens.push((r"^\+", Token::PlusOp));
+    regexes_and_tokens.push((r"^\*=", Token::MultiplyAssign));
     regexes_and_tokens.push((r"^\*", Token::MultiplyOp));
+    regexes_and_tokens.push((r"^\/=", Token::DivideAssign));
     regexes_and_tokens.push((r"^\/", Token::DivideOp));
+    regexes_and_tokens.push((r"^%=", Token::RemainderAssign));
     regexes_and_tokens.push((r"^%", Token::RemainderOp));
     regexes_and_tokens.push((r"^\&&", Token::LogicalAnd));
+    regexes_and_tokens.push((r"^\&=", Token::BitwiseAndAssign));
     regexes_and_tokens.push((r"^\&", Token::BitwiseAnd));
     regexes_and_tokens.push((r"^\|\|", Token::LogicalOr));
+    regexes_and_tokens.push((r"^\|=", Token::BitwiseOrAssign));
     regexes_and_tokens.push((r"^\|", Token::BitwiseOr));
+    regexes_and_tokens.push((r"^\^=", Token::BitwiseXorAssign));
     regexes_and_tokens.push((r"^\^", Token::BitwiseXor));
+    regexes_and_tokens.push((r"^<<=", Token::LeftShiftAssign));
     regexes_and_tokens.push((r"^<<", Token::BitwiseLeftShift));
+    regexes_and_tokens.push((r"^>>=", Token::RightShiftAssign));
     regexes_and_tokens.push((r"^>>", Token::BitwiseRightShift));
     regexes_and_tokens.push((r"^!=", Token::NotEqual));
     regexes_and_tokens.push((r"^!", Token::LogicalNot));
