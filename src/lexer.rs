@@ -10,13 +10,17 @@ pub enum Token {
     Int,
     Void,
     Return,
+    If,
+    Else,
 
     // Symbols
-    LeftParen,
-    RightParen,
-    LeftBrace,
-    RightBrace,
-    Semicolon,
+    LeftParen, // (
+    RightParen, // )
+    LeftBrace, // {
+    RightBrace, // }
+    QuestionMark, // ?
+    Colon, // :
+    Semicolon, // ;
     DecrementOp, // --
     MinusOp, // -
     ComplementOp, // ~
@@ -61,11 +65,15 @@ fn find_keyword_or_symbol(input: &str) -> Option<(Token, &str)> {
     regexes_and_tokens.push((r"^int\b", Token::Int));
     regexes_and_tokens.push((r"^void\b", Token::Void));
     regexes_and_tokens.push((r"^return\b", Token::Return));
+    regexes_and_tokens.push((r"^if\b", Token::If));
+    regexes_and_tokens.push((r"^else\b", Token::Else));
 
     regexes_and_tokens.push((r"^\(", Token::LeftParen));
     regexes_and_tokens.push((r"^\)", Token::RightParen));
     regexes_and_tokens.push((r"^\{", Token::LeftBrace));
     regexes_and_tokens.push((r"^\}", Token::RightBrace));
+    regexes_and_tokens.push((r"^\?", Token::QuestionMark));
+    regexes_and_tokens.push((r"^\:", Token::Colon));
     regexes_and_tokens.push((r"^;", Token::Semicolon));
     regexes_and_tokens.push((r"^\+\+", Token::IncrementOp));
     regexes_and_tokens.push((r"^--", Token::DecrementOp));
