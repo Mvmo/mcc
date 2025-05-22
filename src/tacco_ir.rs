@@ -1,6 +1,6 @@
 use std::{process, sync::Mutex};
 
-use crate::parser::{BinaryOperator, BlockItem, Expression, FunctionDef, Program, Statement, UnaryOperator};
+use crate::parser::{AssignmentOperator, BinaryOperator, BlockItem, Expression, FunctionDef, Program, Statement, UnaryOperator};
 
 static TRUE_VALUE: TaccoVal = TaccoVal::Constant(1);
 static FALSE_VALUE: TaccoVal = TaccoVal::Constant(0);
@@ -211,15 +211,24 @@ fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruc
 
             let tacco_operator = transform_binary_operator(operator);
 
-            into.push(TaccoInstruction::Binary{ operator: tacco_operator, src_1, src_2, dest: dest.clone() });
+            into.push(TaccoInstruction::Binary { operator: tacco_operator, src_1, src_2, dest: dest.clone() });
 
             return dest;
         },
         Expression::Var(identifier) => return TaccoVal::Var(identifier),
-        Expression::Assignment(left, right) => {
+        Expression::Assignment(assignment_operator, left, right) => {
             if let Expression::Var(identifier) = left.as_ref() {
                 let result = emit_transform_expression(right.as_ref().clone(), into);
-                into.push(TaccoInstruction::Copy(result, TaccoVal::Var(identifier.clone())));
+                if let Some(operator) = assignment_operator {
+                    into.push(TaccoInstruction::Binary {
+                        operator: transform_assignment_operator(operator),
+                        src_1: TaccoVal::Var(identifier.clone()),
+                        src_2: result.clone(),
+                        dest: TaccoVal::Var(identifier.clone()),
+                    })
+                } else {
+                    into.push(TaccoInstruction::Copy(result, TaccoVal::Var(identifier.clone())));
+                }
 
                 return TaccoVal::Var(identifier.clone())
             }
@@ -248,6 +257,21 @@ fn transform_binary_operator(binary_operator: BinaryOperator) -> TaccoBinaryOper
         BinaryOperator::GreaterThan => TaccoBinaryOperator::GreaterThan,
         BinaryOperator::GreaterThanOrEqual => TaccoBinaryOperator::GreaterThanOrEqual,
         BinaryOperator::LogicalAnd | BinaryOperator::LogicalOr => process::exit(6)
+    }
+}
+
+fn transform_assignment_operator(assignment_operator: AssignmentOperator) -> TaccoBinaryOperator {
+    return match assignment_operator {
+        AssignmentOperator::Plus => TaccoBinaryOperator::Add,
+        AssignmentOperator::Minus => TaccoBinaryOperator::Subtract,
+        AssignmentOperator::Multiply => TaccoBinaryOperator::Multiply,
+        AssignmentOperator::Divide => TaccoBinaryOperator::Divide,
+        AssignmentOperator::Remainder => TaccoBinaryOperator::Remainder,
+        AssignmentOperator::LeftShift => TaccoBinaryOperator::BitwiseLeftShift,
+        AssignmentOperator::RightShift => TaccoBinaryOperator::BitwiseRightShift,
+        AssignmentOperator::BitwiseAnd => TaccoBinaryOperator::BitwiseAnd,
+        AssignmentOperator::BitwiseOr => TaccoBinaryOperator::BitwiseOr,
+        AssignmentOperator::BitwiseXor => TaccoBinaryOperator::BitwiseXor,
     }
 }
 
