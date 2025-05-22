@@ -20,6 +20,7 @@ pub enum Token {
     DecrementOp, // --
     MinusOp, // -
     ComplementOp, // ~
+    IncrementOp, // ++
     PlusOp, // +
     MultiplyOp, // *
     DivideOp, // /
@@ -66,6 +67,7 @@ fn find_keyword_or_symbol(input: &str) -> Option<(Token, &str)> {
     regexes_and_tokens.push((r"^\{", Token::LeftBrace));
     regexes_and_tokens.push((r"^\}", Token::RightBrace));
     regexes_and_tokens.push((r"^;", Token::Semicolon));
+    regexes_and_tokens.push((r"^\+\+", Token::IncrementOp));
     regexes_and_tokens.push((r"^--", Token::DecrementOp));
     regexes_and_tokens.push((r"^-=", Token::MinusAssign));
     regexes_and_tokens.push((r"^-", Token::MinusOp));
