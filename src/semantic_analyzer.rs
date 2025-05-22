@@ -47,9 +47,10 @@ fn resolve_statement(statement: Statement, variable_map: &mut HashMap<String, St
 
 fn resolve_expression(expression: Expression, variable_map: &mut HashMap<String, String>) -> Expression {
     match expression {
-        Expression::Assignment(left, right) => {
+        Expression::Assignment(assignment_operator, left, right) => {
             if let Expression::Var(_) = left.as_ref() {
                 return Expression::Assignment(
+                    assignment_operator,
                     Box::new(resolve_expression(left.as_ref().clone(), variable_map)),
                     Box::new(resolve_expression(right.as_ref().clone(), variable_map)),
                 )
