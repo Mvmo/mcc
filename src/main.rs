@@ -5,6 +5,7 @@ use clap::{Parser, command, arg};
 mod preprocess;
 mod lexer;
 mod parser;
+mod semantic_analyzer;
 mod tacco_ir;
 mod asm_gen;
 mod asm_reg_resolver;
@@ -20,6 +21,8 @@ struct CompilerArgs {
     lex: bool,
     #[arg(long)]
     parse: bool,
+    #[arg(long)]
+    validate: bool,
     #[arg(long)]
     tacco: bool,
     #[arg(long)]
@@ -44,7 +47,13 @@ fn main() {
         process::exit(0);
     }
 
-    let tacco_ir_program = tacco_ir::transform(program.clone());
+    let validated_program = semantic_analyzer::validate(program);
+    if compiler_args.validate {
+        println!("{:?}", validated_program);
+        process::exit(0);
+    }
+
+    let tacco_ir_program = tacco_ir::transform(validated_program.clone());
     if compiler_args.tacco {
         println!("{:?}", tacco_ir_program);
         process::exit(0);
