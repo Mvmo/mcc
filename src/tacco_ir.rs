@@ -152,6 +152,13 @@ fn emit_statement(statement: Statement, into: &mut Vec<TaccoInstruction>) {
             emit_transform_expression(expression, into);
         },
         Statement::Null => {},
+        Statement::Label(label, statement) => {
+            into.push(TaccoInstruction::Label(label));
+            emit_statement(statement.as_ref().clone(), into);
+        }
+        Statement::Goto(label) => {
+            into.push(TaccoInstruction::Jump(label));
+        }
     }
 }
 
