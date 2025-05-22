@@ -1,6 +1,6 @@
 use std::{process, sync::Mutex};
 
-use crate::parser::{BinaryOperator, Expression, FunctionDef, Program, Statement, UnaryOperator};
+use crate::parser::{BinaryOperator, BlockItem, Expression, FunctionDef, Program, Statement, UnaryOperator};
 
 static TRUE_VALUE: TaccoVal = TaccoVal::Constant(1);
 static FALSE_VALUE: TaccoVal = TaccoVal::Constant(0);
@@ -76,8 +76,34 @@ pub fn transform(program: Program) -> TaccoProgram {
 
 fn transform_function_definition(function_definition: FunctionDef) -> TaccoFunctionDef {
     let mut instructions = Vec::<TaccoInstruction>::new();
-    // emit_statement(function_definition.body, &mut instructions);
+    emit_block_items(&function_definition.body, &mut instructions);
+
+    let last_instruction = instructions.last();
+    if !matches!(last_instruction, Some(TaccoInstruction::Return(_))) {
+        instructions.push(TaccoInstruction::Return(TaccoVal::Constant(0)));
+    }
+
     return TaccoFunctionDef { identifier: function_definition.name, body: instructions }
+}
+
+fn emit_block_items(block_items: &Vec<BlockItem>, into: &mut Vec<TaccoInstruction>) {
+    block_items.iter().for_each(|block_item| {
+        match block_item {
+            BlockItem::Statement(statement) => {
+                emit_statement(statement.clone(), into);
+            },
+            BlockItem::Declaration(declaration) => {
+                if declaration.initializer.is_none() {
+                    return
+                }
+
+                let init_expr = declaration.initializer.as_ref().unwrap();
+                let value = emit_transform_expression(init_expr.clone(), into);
+
+                into.push(TaccoInstruction::Copy(value, TaccoVal::Var(declaration.name.clone())));
+            }
+        }
+    });
 }
 
 fn emit_statement(statement: Statement, into: &mut Vec<TaccoInstruction>) {
@@ -86,7 +112,10 @@ fn emit_statement(statement: Statement, into: &mut Vec<TaccoInstruction>) {
             let value = emit_transform_expression(expression, into);
             into.push(TaccoInstruction::Return(value));
         },
-        _ => todo!(),
+        Statement::Expression(expression) => {
+            emit_transform_expression(expression, into);
+        },
+        Statement::Null => {}
     }
 }
 
@@ -186,7 +215,17 @@ fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruc
 
             return dest;
         },
-        _ => todo!(),
+        Expression::Var(identifier) => return TaccoVal::Var(identifier),
+        Expression::Assignment(left, right) => {
+            if let Expression::Var(identifier) = left.as_ref() {
+                let result = emit_transform_expression(right.as_ref().clone(), into);
+                into.push(TaccoInstruction::Copy(result, TaccoVal::Var(identifier.clone())));
+
+                return TaccoVal::Var(identifier.clone())
+            }
+
+            process::exit(10);
+        }
     }
 }
 
