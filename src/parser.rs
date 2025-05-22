@@ -100,6 +100,8 @@ pub enum Statement {
         _else: Option<Box<Statement>>,
     },
     Expression(Expression),
+    Label(String, Box<Statement>),
+    Goto(String),
     Null,
 }
 
@@ -397,20 +399,40 @@ fn parse_int(tokens: &mut Tokens) -> i32 {
 }
 
 fn parse_statement(tokens: &mut Tokens) -> Statement {
-    let next_token = tokens.front().expect("Parser | Expected token but didn't get one.");
-    if *next_token == Token::Return {
+    let next_token = tokens.front().cloned().expect("Parser | Expected token but didn't get one.");
+    if next_token == Token::Return {
         expect_token(tokens, Token::Return);
         let return_value = parse_expression(tokens, 0);
         expect_token(tokens, Token::Semicolon);
         return Statement::Return(return_value)
     }
 
-    if *next_token == Token::Semicolon {
+    if next_token == Token::Goto {
+        expect_token(tokens, Token::Goto);
+        let label = parse_identifier(tokens);
+        expect_token(tokens, Token::Semicolon);
+
+        return Statement::Goto(label)
+    }
+
+    if let Token::Identifier(_) = next_token {
+        let label = parse_identifier(tokens);
+        let next_token = tokens.front();
+        if let Some(Token::Colon) = next_token {
+            expect_token(tokens, Token::Colon);
+            let statement = parse_statement(tokens);
+            return Statement::Label(label, Box::new(statement));
+        } else {
+            tokens.push_front(Token::Identifier(label));
+        }
+    }
+
+    if next_token == Token::Semicolon {
         expect_token(tokens, Token::Semicolon);
         return Statement::Null;
     }
 
-    if *next_token == Token::If {
+    if next_token == Token::If {
         expect_token(tokens, Token::If);
         expect_token(tokens, Token::LeftParen);
         let condition = parse_expression(tokens, 0);
