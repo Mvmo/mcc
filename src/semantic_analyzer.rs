@@ -64,31 +64,24 @@ pub fn label_resolve_statement(statement: &Statement, label_map: &mut HashMap<St
 }
 
 pub fn var_resolve(program: Program) -> Program {
-    let mut variable_map = HashMap::<String, String>::new();
-
-    let body = program.function_definition.body.block_items.iter().map(|block_item| {
-        match block_item {
-            BlockItem::Statement(statement) => BlockItem::Statement(var_resolve_statement(statement, &mut variable_map)),
-            BlockItem::Declaration(declaration) => BlockItem::Declaration(var_resolve_declaration(declaration.clone(), &mut variable_map)),
-        }
-    }).collect();
+    let mut variable_map = HashMap::<String, (String, bool)>::new();
 
     return Program {
         function_definition: FunctionDef {
             name: program.function_definition.name,
-            body: Block{ block_items: body },
+            body: var_resolve_block(&program.function_definition.body, &mut variable_map),
         }
     }
 }
 
-fn var_resolve_declaration(declaration: Declaration, variable_map: &mut HashMap<String, String>) -> Declaration {
-    if variable_map.contains_key(&declaration.name) {
+fn var_resolve_declaration(declaration: Declaration, variable_map: &mut HashMap<String, (String, bool)>) -> Declaration {
+    if variable_map.contains_key(&declaration.name) && variable_map.get(&declaration.name.clone()).map_or(false, |(_, from_current_scope)| { *from_current_scope }) {
         println!("Semantic Analyzer | Duplicate variable declaration");
         process::exit(7);
     }
 
     let unique_name = generate_unique_name(declaration.name.clone());
-    variable_map.insert(declaration.name, unique_name.clone());
+    variable_map.insert(declaration.name, (unique_name.clone(), true));
 
     let mut init = None;
     if let Some(init_expr) = declaration.initializer {
@@ -98,7 +91,7 @@ fn var_resolve_declaration(declaration: Declaration, variable_map: &mut HashMap<
     return Declaration{ name: unique_name, initializer: init };
 }
 
-fn var_resolve_statement(statement: &Statement, variable_map: &mut HashMap<String, String>) -> Statement {
+fn var_resolve_statement(statement: &Statement, variable_map: &mut HashMap<String, (String, bool)>) -> Statement {
     return match statement {
         Statement::Return(expression) => Statement::Return(var_resolve_expression(&expression, variable_map)),
         Statement::Expression(expression) => Statement::Expression(var_resolve_expression(&expression, variable_map)),
@@ -113,11 +106,34 @@ fn var_resolve_statement(statement: &Statement, variable_map: &mut HashMap<Strin
             label.clone(),
             Box::new(var_resolve_statement(statement, variable_map)),
         ),
-        _ => todo!(),
+        Statement::Compound(block) => {
+            let mut new_var_map = copy_variable_map(variable_map);
+            Statement::Compound(var_resolve_block(block, &mut new_var_map))
+        },
     }
 }
 
-fn var_resolve_expression(expression: &Expression, variable_map: &mut HashMap<String, String>) -> Expression {
+fn copy_variable_map(variable_map: &HashMap<String, (String, bool)>) -> HashMap<String, (String, bool)> {
+    let new_map: HashMap<String, (String, bool)> = variable_map.iter()
+        .map(|(key, (name, _))| {
+            (key.clone(), (name.clone(), false))
+        })
+        .collect();
+    return new_map
+}
+
+fn var_resolve_block(block: &Block, variable_map: &mut HashMap<String, (String, bool)>) -> Block {
+    let block_items = block.block_items.iter().map(|block_item| {
+        match block_item {
+            BlockItem::Statement(statement) => BlockItem::Statement(var_resolve_statement(statement, variable_map)),
+            BlockItem::Declaration(declaration) => BlockItem::Declaration(var_resolve_declaration(declaration.clone(), variable_map)),
+        }
+    }).collect();
+
+    return Block { block_items };
+}
+
+fn var_resolve_expression(expression: &Expression, variable_map: &mut HashMap<String, (String, bool)>) -> Expression {
     match expression {
         Expression::Assignment(assignment_operator, left, right) => {
             if let Expression::Var(_) = left.as_ref() {
@@ -133,7 +149,7 @@ fn var_resolve_expression(expression: &Expression, variable_map: &mut HashMap<St
         },
         Expression::Var(identifier) => {
             if variable_map.contains_key(identifier) {
-                return Expression::Var(variable_map.get(identifier).unwrap().to_string())
+                return Expression::Var(variable_map.get(identifier).unwrap().0.to_string())
             }
 
             println!("Semantic Analyzer | Undeclared variable use");
