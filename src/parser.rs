@@ -70,9 +70,6 @@ pub enum AssignmentOperator {
     BitwiseXor,
 }
 
-impl AssignmentOperator {
-}
-
 #[derive(Debug, Clone)]
 pub enum Expression {
     Const(i32),
@@ -86,12 +83,22 @@ pub enum Expression {
         left: Box<Expression>,
         right: Box<Expression>,
     },
-    Assignment(Option<AssignmentOperator>, Box<Expression>, Box<Expression>)
+    Assignment(Option<AssignmentOperator>, Box<Expression>, Box<Expression>),
+    Conditional {
+        condition: Box<Expression>,
+        if_true: Box<Expression>,
+        _else: Box<Expression>,
+    }
 }
 
 #[derive(Debug, Clone)]
 pub enum Statement {
     Return(Expression),
+    If {
+        condition: Expression,
+        then: Box<Statement>,
+        _else: Option<Box<Statement>>,
+    },
     Expression(Expression),
     Null,
 }
@@ -115,10 +122,17 @@ fn parse_program(tokens: &mut Tokens) -> Program {
 }
 
 fn parse_block_item(tokens: &mut Tokens) -> BlockItem {
+    println!("Parsing block item");
     let next_token = tokens.front().expect("Parser | Expected token but didn't get one");
     return match next_token {
-        Token::Int => BlockItem::Declaration(parse_declaration(tokens)),
-        _ => BlockItem::Statement(parse_statement(tokens)),
+        Token::Int => {
+            println!("  -> as declaration");
+            BlockItem::Declaration(parse_declaration(tokens))
+        },
+        _ => {
+            println!("  -> as statement");
+            BlockItem::Statement(parse_statement(tokens))
+        },
     }
 }
 
@@ -133,6 +147,7 @@ fn parse_declaration(tokens: &mut Tokens) -> Declaration {
         init_expr = Some(parse_expression(tokens, 0));
     }
 
+    println!("parse decl");
     expect_token(tokens, Token::Semicolon);
     return Declaration { name: identifier, initializer: init_expr }
 }
@@ -211,6 +226,10 @@ fn parse_expression(tokens: &mut Tokens, min_prec: i32) -> Expression {
             let assignment_operator = parse_assignment_operator(tokens);
             let right_expr = parse_expression(tokens, precedence(&next_token));
             left_expr = Expression::Assignment(assignment_operator, Box::new(left_expr), Box::new(right_expr));
+        } else if next_token == Token::QuestionMark {
+            let middle = parse_conditional_middle(tokens);
+            let right_expr = parse_expression(tokens, precedence(&next_token));
+            left_expr = Expression::Conditional { condition: Box::new(left_expr.clone()), if_true: Box::new(middle), _else: Box::new(right_expr) }
         } else {
             let operator = parse_binary_operator(tokens);
             let right_expr = parse_expression(tokens, precedence(&next_token) + 1);
@@ -220,6 +239,14 @@ fn parse_expression(tokens: &mut Tokens, min_prec: i32) -> Expression {
     }
 
     return left_expr
+}
+
+fn parse_conditional_middle(tokens: &mut Tokens) -> Expression {
+    expect_token(tokens, Token::QuestionMark);
+    let expr = parse_expression(tokens, 0);
+    expect_token(tokens, Token::Colon);
+
+    return expr;
 }
 
 fn is_assignment_operator(token: &Token) -> bool {
@@ -251,6 +278,7 @@ fn precedence(token: &Token) -> i32 {
         Token::BitwiseOr => 28,
         Token::LogicalAnd => 10,
         Token::LogicalOr => 5,
+        Token::QuestionMark => 3,
         Token::Assign
         | Token::PlusAssign
         | Token::MinusAssign
@@ -310,6 +338,7 @@ fn is_binary_operator(token: &Token) -> bool {
         | Token::BitwiseAndAssign
         | Token::BitwiseOrAssign
         | Token::BitwiseXorAssign
+        | Token::QuestionMark
         => true,
         _ => false,
     }
@@ -381,6 +410,23 @@ fn parse_statement(tokens: &mut Tokens) -> Statement {
         return Statement::Null;
     }
 
+    if *next_token == Token::If {
+        expect_token(tokens, Token::If);
+        expect_token(tokens, Token::LeftParen);
+        let condition = parse_expression(tokens, 0);
+        expect_token(tokens, Token::RightParen);
+        let then = Box::new(parse_statement(tokens));
+
+        println!("here should be the else but {:?}", tokens.front());
+        let mut _else = None;
+        if let Some(Token::Else) = tokens.front() {
+            expect_token(tokens, Token::Else);
+            _else = Some(Box::new(parse_statement(tokens)));
+        }
+
+        return Statement::If { condition, then, _else }
+    }
+
     let expression = parse_expression(tokens, 0);
     expect_token(tokens, Token::Semicolon);
 
@@ -388,9 +434,11 @@ fn parse_statement(tokens: &mut Tokens) -> Statement {
 }
 
 fn expect_token(tokens: &mut Tokens, expected: Token) -> Token {
+    println!("expecting token: {:?}", expected);
     let token_option = tokens.pop_front();
     if token_option.as_ref().is_none_or(|token| *token != expected) {
         println!("Expected token {:?} but got {:?}", expected, token_option);
+        println!("Remaining tokens: {:?}", tokens);
         process::exit(9);
     }
 
