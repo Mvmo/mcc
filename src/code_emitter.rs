@@ -19,7 +19,6 @@ fn write_function_def(lines: &mut Vec<String>, function_def: AsmFunctionDef) {
     lines.push(format!("
             .globl _{0}
         _{0}:
-            ; function prologue
             pushq %rbp
             movq %rsp, %rbp
     ", function_def.name));
@@ -35,7 +34,6 @@ fn write_instruction(lines: &mut Vec<String>, instruction: AsmInstruction) {
             movl {}, {}
         ", translate_operand(src), translate_operand(dest))),
         AsmInstruction::Ret => lines.push(format!("
-            ; function epilogue
             movq %rbp, %rsp
             popq %rbp
             ret
