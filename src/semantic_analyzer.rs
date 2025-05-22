@@ -42,6 +42,7 @@ fn resolve_statement(statement: Statement, variable_map: &mut HashMap<String, St
         Statement::Return(expression) => Statement::Return(resolve_expression(expression, variable_map)),
         Statement::Expression(expression) => Statement::Expression(resolve_expression(expression, variable_map)),
         Statement::Null => Statement::Null,
+        _ => todo!()
     }
 }
 
@@ -77,6 +78,7 @@ fn resolve_expression(expression: Expression, variable_map: &mut HashMap<String,
             inner_expression: Box::new(resolve_expression(inner_expression.as_ref().clone(), variable_map)),
         },
         Expression::Const(int_value) => Expression::Const(int_value),
+        _ => todo!()
     }
 }
 

@@ -115,7 +115,8 @@ fn emit_statement(statement: Statement, into: &mut Vec<TaccoInstruction>) {
         Statement::Expression(expression) => {
             emit_transform_expression(expression, into);
         },
-        Statement::Null => {}
+        Statement::Null => {},
+        _ => todo!(),
     }
 }
 
@@ -291,7 +292,8 @@ fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruc
             }
 
             process::exit(10);
-        }
+        },
+        _ => todo!(),
     }
 }
 
