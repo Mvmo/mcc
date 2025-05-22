@@ -76,7 +76,7 @@ pub fn transform(program: Program) -> TaccoProgram {
 
 fn transform_function_definition(function_definition: FunctionDef) -> TaccoFunctionDef {
     let mut instructions = Vec::<TaccoInstruction>::new();
-    emit_block_items(&function_definition.body, &mut instructions);
+    emit_block_items(&function_definition.body.block_items, &mut instructions);
 
     let last_instruction = instructions.last();
     if !matches!(last_instruction, Some(TaccoInstruction::Return(_))) {
@@ -158,7 +158,8 @@ fn emit_statement(statement: Statement, into: &mut Vec<TaccoInstruction>) {
         }
         Statement::Goto(label) => {
             into.push(TaccoInstruction::Jump(label));
-        }
+        },
+        _ => todo!(),
     }
 }
 

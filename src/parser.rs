@@ -5,12 +5,17 @@ use crate::lexer::Token;
 #[derive(Debug, Clone)]
 pub struct FunctionDef {
     pub name: String,
-    pub body: Vec<BlockItem>,
+    pub body: Block,
 }
 
 #[derive(Debug, Clone)]
 pub struct Program {
     pub function_definition: FunctionDef,
+}
+
+#[derive(Debug, Clone)]
+pub struct Block {
+    pub block_items: Vec<BlockItem>
 }
 
 #[derive(Debug, Clone)]
@@ -102,6 +107,7 @@ pub enum Statement {
     Expression(Expression),
     Label(String, Box<Statement>),
     Goto(String),
+    Compound(Block),
     Null,
 }
 
@@ -120,6 +126,25 @@ fn parse_program(tokens: &mut Tokens) -> Program {
     let function = parse_function(tokens);
     return Program {
         function_definition: function,
+    }
+}
+
+fn parse_block(tokens: &mut Tokens) -> Block {
+    expect_token(tokens, Token::LeftBrace);
+
+    let mut block_items = Vec::<BlockItem>::new();
+
+    let mut next_token = tokens.front().unwrap();
+    while *next_token != Token::RightBrace {
+        let block_item = parse_block_item(tokens);
+        block_items.push(block_item);
+        next_token = tokens.front().unwrap();
+    }
+
+    expect_token(tokens, Token::RightBrace);
+
+    return Block {
+        block_items,
     }
 }
 
@@ -161,19 +186,11 @@ fn parse_function(tokens: &mut Tokens) -> FunctionDef {
     expect_token(tokens, Token::Void);
     expect_token(tokens, Token::RightParen);
 
-    expect_token(tokens, Token::LeftBrace);
-
-    let mut block_items = Vec::<BlockItem>::new();
-    while *tokens.front().unwrap() != Token::RightBrace {
-        let block_item = parse_block_item(tokens);
-        block_items.push(block_item);
-    }
-
-    expect_token(tokens, Token::RightBrace);
+    let block = parse_block(tokens);
 
     FunctionDef {
         name: identifier,
-        body: block_items,
+        body: block,
     }
 }
 
@@ -405,6 +422,11 @@ fn parse_statement(tokens: &mut Tokens) -> Statement {
         let return_value = parse_expression(tokens, 0);
         expect_token(tokens, Token::Semicolon);
         return Statement::Return(return_value)
+    }
+
+    if next_token == Token::LeftBrace {
+        let block = parse_block(tokens);
+        return Statement::Compound(block);
     }
 
     if next_token == Token::Goto {

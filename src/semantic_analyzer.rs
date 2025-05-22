@@ -1,6 +1,6 @@
 use std::{collections::HashMap, process, sync::Mutex};
 
-use crate::parser::{BlockItem, Declaration, Expression, FunctionDef, Program, Statement};
+use crate::parser::{Block, BlockItem, Declaration, Expression, FunctionDef, Program, Statement};
 
 pub fn validate(program: Program) -> Program {
     return label_resolve(var_resolve(program))
@@ -10,7 +10,7 @@ pub fn label_resolve(program: Program) -> Program {
     let mut undefined_used_labels = Vec::<String>::new();
     let mut label_map = HashMap::<String, String>::new();
 
-    let body = program.function_definition.body.iter().map(|block_item| {
+    let body = program.function_definition.body.block_items.iter().map(|block_item| {
         match block_item {
             BlockItem::Statement(statement) => BlockItem::Statement(label_resolve_statement(statement, &mut label_map, &mut undefined_used_labels)),
             BlockItem::Declaration(declaration) => BlockItem::Declaration(declaration.clone()),
@@ -22,7 +22,7 @@ pub fn label_resolve(program: Program) -> Program {
         process::exit(40289);
     }
 
-    return Program { function_definition: FunctionDef { name: program.function_definition.name, body: body } };
+    return Program { function_definition: FunctionDef { name: program.function_definition.name, body: Block { block_items: body } } };
 }
 
 pub fn label_resolve_statement(statement: &Statement, label_map: &mut HashMap<String, String>, undefined_used_labels: &mut Vec<String>) -> Statement {
@@ -66,7 +66,7 @@ pub fn label_resolve_statement(statement: &Statement, label_map: &mut HashMap<St
 pub fn var_resolve(program: Program) -> Program {
     let mut variable_map = HashMap::<String, String>::new();
 
-    let body = program.function_definition.body.iter().map(|block_item| {
+    let body = program.function_definition.body.block_items.iter().map(|block_item| {
         match block_item {
             BlockItem::Statement(statement) => BlockItem::Statement(var_resolve_statement(statement, &mut variable_map)),
             BlockItem::Declaration(declaration) => BlockItem::Declaration(var_resolve_declaration(declaration.clone(), &mut variable_map)),
@@ -76,7 +76,7 @@ pub fn var_resolve(program: Program) -> Program {
     return Program {
         function_definition: FunctionDef {
             name: program.function_definition.name,
-            body,
+            body: Block{ block_items: body },
         }
     }
 }
@@ -113,6 +113,7 @@ fn var_resolve_statement(statement: &Statement, variable_map: &mut HashMap<Strin
             label.clone(),
             Box::new(var_resolve_statement(statement, variable_map)),
         ),
+        _ => todo!(),
     }
 }
 
