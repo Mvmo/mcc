@@ -13,6 +13,11 @@ pub enum Token {
     If, // if
     Else, // else
     Goto, // goto
+    Do, // do
+    While, // while
+    For, // for
+    Break, // break
+    Continue, // continue
 
     // Symbols
     LeftParen, // (
@@ -70,6 +75,11 @@ fn find_keyword_or_symbol(input: &str) -> Option<(Token, &str)> {
     regexes_and_tokens.push((r"^else\b", Token::Else));
     regexes_and_tokens.push((r"^int\b", Token::Int));
     regexes_and_tokens.push((r"^goto\b", Token::Goto));
+    regexes_and_tokens.push((r"^do\b", Token::Do));
+    regexes_and_tokens.push((r"^while\b", Token::While));
+    regexes_and_tokens.push((r"^for\b", Token::For));
+    regexes_and_tokens.push((r"^break\b", Token::Break));
+    regexes_and_tokens.push((r"^continue\b", Token::Continue));
 
     regexes_and_tokens.push((r"^\(", Token::LeftParen));
     regexes_and_tokens.push((r"^\)", Token::RightParen));
