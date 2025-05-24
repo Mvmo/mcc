@@ -160,6 +160,7 @@ fn emit_statement(statement: Statement, into: &mut Vec<TaccoInstruction>) {
             into.push(TaccoInstruction::Jump(label));
         },
         Statement::Compound(block) => emit_block_items(&block.block_items, into),
+        _ => todo!()
     }
 }
 
