@@ -18,6 +18,9 @@ pub enum Token {
     For, // for
     Break, // break
     Continue, // continue
+    Switch, // switch
+    Case, // case
+    Default, // default
 
     // Symbols
     LeftParen, // (
@@ -80,6 +83,9 @@ fn find_keyword_or_symbol(input: &str) -> Option<(Token, &str)> {
     regexes_and_tokens.push((r"^for\b", Token::For));
     regexes_and_tokens.push((r"^break\b", Token::Break));
     regexes_and_tokens.push((r"^continue\b", Token::Continue));
+    regexes_and_tokens.push((r"^switch\b", Token::Switch));
+    regexes_and_tokens.push((r"^case\b", Token::Case));
+    regexes_and_tokens.push((r"^default\b", Token::Default));
 
     regexes_and_tokens.push((r"^\(", Token::LeftParen));
     regexes_and_tokens.push((r"^\)", Token::RightParen));
