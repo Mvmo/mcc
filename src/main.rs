@@ -12,6 +12,8 @@ mod asm_reg_resolver;
 mod code_emitter;
 mod assembler;
 
+mod semantics;
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct CompilerArgs {
@@ -47,7 +49,7 @@ fn main() {
         process::exit(0);
     }
 
-    let validated_program = semantic_analyzer::validate(program);
+    let validated_program = semantics::label_resolve::perform(semantic_analyzer::validate(program));
     if compiler_args.validate {
         println!("{:?}", validated_program);
         process::exit(0);
