@@ -1,6 +1,6 @@
 use std::{collections::HashMap, process, sync::Mutex};
 
-use crate::parser::{Block, BlockItem, Declaration, Expression, FunctionDef, Program, Statement};
+use crate::parser::{Block, BlockItem, Declaration, Expression, ForInitializer, FunctionDef, Program, Statement};
 
 pub fn validate(program: Program) -> Program {
     return label_resolve(var_resolve(program))
@@ -74,17 +74,17 @@ pub fn var_resolve(program: Program) -> Program {
     }
 }
 
-fn var_resolve_declaration(declaration: Declaration, variable_map: &mut HashMap<String, (String, bool)>) -> Declaration {
+fn var_resolve_declaration(declaration: &Declaration, variable_map: &mut HashMap<String, (String, bool)>) -> Declaration {
     if variable_map.contains_key(&declaration.name) && variable_map.get(&declaration.name.clone()).map_or(false, |(_, from_current_scope)| { *from_current_scope }) {
         println!("Semantic Analyzer | Duplicate variable declaration");
         process::exit(7);
     }
 
     let unique_name = generate_unique_name(declaration.name.clone());
-    variable_map.insert(declaration.name, (unique_name.clone(), true));
+    variable_map.insert(declaration.name.clone(), (unique_name.clone(), true));
 
     let mut init = None;
-    if let Some(init_expr) = declaration.initializer {
+    if let Some(init_expr) = declaration.initializer.clone() {
         init = Some(var_resolve_expression(&init_expr, variable_map));
     }
 
@@ -110,6 +110,43 @@ fn var_resolve_statement(statement: &Statement, variable_map: &mut HashMap<Strin
             let mut new_var_map = copy_variable_map(variable_map);
             Statement::Compound(var_resolve_block(block, &mut new_var_map))
         },
+        Statement::For { init, condition, post, body, label } => {
+            let mut new_variable_map = copy_variable_map(variable_map);
+
+            Statement::For {
+                init: var_resolve_for_init(init, &mut new_variable_map),
+                condition: var_resolve_optional_expr(condition, &mut new_variable_map),
+                post: var_resolve_optional_expr(post, &mut new_variable_map),
+                body: Box::new(var_resolve_statement(body.as_ref(), &mut new_variable_map)),
+                label: label.clone()
+            }
+        },
+        Statement::DoWhile { body, condition, label } => Statement::DoWhile {
+            body: Box::new(var_resolve_statement(body, variable_map)),
+            condition: var_resolve_expression(condition, variable_map),
+            label: label.clone(),
+        },
+        Statement::While { condition, body, label } => Statement::While {
+            condition: var_resolve_expression(condition, variable_map),
+            body: Box::new(var_resolve_statement(body, variable_map)),
+            label: label.clone(),
+        },
+        Statement::Break(label) => Statement::Break(label.clone()),
+        Statement::Continue(label) => Statement::Continue(label.clone()),
+    }
+}
+
+fn var_resolve_optional_expr(expression_opt: &Option<Expression>, variable_map: &mut HashMap<String, (String, bool)>) -> Option<Expression> {
+    return match expression_opt {
+        Some(expr) => Some(var_resolve_expression(&expr, variable_map)),
+        None => None,
+    }
+}
+
+fn var_resolve_for_init(for_init: &ForInitializer, variable_map: &mut HashMap<String, (String, bool)>) -> ForInitializer {
+    match for_init {
+        ForInitializer::Declaration(decl) => ForInitializer::Declaration(var_resolve_declaration(decl, variable_map)),
+        ForInitializer::Expression(expr) => ForInitializer::Expression(var_resolve_optional_expr(&expr, variable_map)),
     }
 }
 
@@ -126,7 +163,7 @@ fn var_resolve_block(block: &Block, variable_map: &mut HashMap<String, (String, 
     let block_items = block.block_items.iter().map(|block_item| {
         match block_item {
             BlockItem::Statement(statement) => BlockItem::Statement(var_resolve_statement(statement, variable_map)),
-            BlockItem::Declaration(declaration) => BlockItem::Declaration(var_resolve_declaration(declaration.clone(), variable_map)),
+            BlockItem::Declaration(declaration) => BlockItem::Declaration(var_resolve_declaration(declaration, variable_map)),
         }
     }).collect();
 
