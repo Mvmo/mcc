@@ -108,7 +108,32 @@ pub enum Statement {
     Label(String, Box<Statement>),
     Goto(String),
     Compound(Block),
+    While {
+        condition: Expression,
+        body: Box<Statement>,
+        label: String,
+    },
+    DoWhile {
+        body: Box<Statement>,
+        condition: Expression,
+        label: String,
+    },
+    For {
+        init: ForInitializer,
+        condition: Option<Expression>,
+        post: Option<Expression>,
+        body: Box<Statement>,
+        label: String,
+    },
+    Break(String),
+    Continue(String),
     Null,
+}
+
+#[derive(Debug, Clone)]
+pub enum ForInitializer {
+    Declaration(Declaration),
+    Expression(Option<Expression>)
 }
 
 type Tokens = VecDeque<Token>;
@@ -159,6 +184,25 @@ fn parse_block_item(tokens: &mut Tokens) -> BlockItem {
         _ => {
             println!("  -> as statement");
             BlockItem::Statement(parse_statement(tokens))
+        },
+    }
+}
+
+fn parse_for_initializer(tokens: &mut Tokens) -> ForInitializer {
+    let next_token = tokens.front().expect("Parser | Expected token but didn't get one");
+    return match next_token {
+        Token::Int => {
+            let declaration = parse_declaration(tokens);
+            ForInitializer::Declaration(declaration)
+        },
+        Token::Semicolon => {
+            expect_token(tokens, Token::Semicolon);
+            ForInitializer::Expression(None)
+        }
+        _ => {
+            let expr = parse_expression(tokens, 0);
+            expect_token(tokens, Token::Semicolon);
+            ForInitializer::Expression(Some(expr))
         },
     }
 }
@@ -226,7 +270,10 @@ fn parse_factor_expression(tokens: &mut Tokens) -> Expression {
 
             expr
         },
-        _ => process::exit(9),
+        _ => {
+            println!("parse_factor next_token = {:?}", next_token);
+            process::exit(58)
+        },
     };
 
     if let Some(Token::IncrementOp | Token::DecrementOp) = tokens.front() {
@@ -435,6 +482,99 @@ fn parse_statement(tokens: &mut Tokens) -> Statement {
         expect_token(tokens, Token::Semicolon);
 
         return Statement::Goto(label)
+    }
+
+    if next_token == Token::Break {
+        expect_token(tokens, Token::Break);
+        expect_token(tokens, Token::Semicolon);
+
+        return Statement::Break("break".to_string())
+    }
+
+    if next_token == Token::Continue {
+        expect_token(tokens, Token::Continue);
+        expect_token(tokens, Token::Semicolon);
+
+        return Statement::Continue("continue".to_string())
+    }
+
+    if next_token == Token::While {
+        expect_token(tokens, Token::While);
+        expect_token(tokens, Token::LeftParen);
+
+        let condition = parse_expression(tokens, 0);
+
+        expect_token(tokens, Token::RightParen);
+
+        let body = parse_statement(tokens);
+
+        return Statement::While { condition:
+            condition,
+            body: Box::new(body),
+            label: "while".to_string(),
+        }
+    }
+
+    if next_token == Token::Do {
+        expect_token(tokens, Token::Do);
+
+        let body = parse_statement(tokens);
+
+        expect_token(tokens, Token::While);
+        expect_token(tokens, Token::LeftParen);
+
+        let condition = parse_expression(tokens, 0);
+
+        expect_token(tokens, Token::RightParen);
+        expect_token(tokens, Token::Semicolon);
+        return Statement::DoWhile {
+            body: Box::new(body),
+            condition,
+            label: "do_while".to_string(),
+        }
+    }
+
+    if next_token == Token::For {
+        println!("parsing for:");
+        expect_token(tokens, Token::For);
+        expect_token(tokens, Token::LeftParen);
+        println!("  consumed 'for (");
+
+        let for_init = parse_for_initializer(tokens);
+
+        println!("  for_init = {:?}", for_init);
+        println!("  next_token = {:?}", tokens.front());
+
+        let mut condition = None;
+        if !matches!(tokens.front(), Some(Token::Semicolon)) {
+            condition = Some(parse_expression(tokens, 0));
+        }
+
+        println!("  condition = {:?}", condition);
+
+        expect_token(tokens, Token::Semicolon);
+        println!("  consumed )");
+        println!("  next_token = {:?}", tokens.front());
+
+        let mut post = None;
+        if !matches!(tokens.front(), Some(Token::RightParen)) {
+            post = Some(parse_expression(tokens, 0));
+        }
+
+        println!("  post = {:?}", condition);
+
+        expect_token(tokens, Token::RightParen);
+
+        let body = parse_statement(tokens);
+        println!("  body = {:?}", body);
+
+        return Statement::For {
+            init: for_init,
+            condition,
+            post,
+            body: Box::new(body),
+            label: "for".to_string(),
+        }
     }
 
     if let Token::Identifier(_) = next_token {
