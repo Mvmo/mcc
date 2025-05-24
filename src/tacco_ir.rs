@@ -1,6 +1,6 @@
 use std::{process, sync::Mutex};
 
-use crate::parser::{AssignmentOperator, BinaryOperator, BlockItem, Expression, FunctionDef, Program, Statement, UnaryOperator};
+use crate::parser::{AssignmentOperator, BinaryOperator, BlockItem, Declaration, Expression, ForInitializer, FunctionDef, Program, Statement, UnaryOperator};
 
 static TRUE_VALUE: TaccoVal = TaccoVal::Constant(1);
 static FALSE_VALUE: TaccoVal = TaccoVal::Constant(0);
@@ -92,18 +92,20 @@ fn emit_block_items(block_items: &Vec<BlockItem>, into: &mut Vec<TaccoInstructio
             BlockItem::Statement(statement) => {
                 emit_statement(statement.clone(), into);
             },
-            BlockItem::Declaration(declaration) => {
-                if declaration.initializer.is_none() {
-                    return
-                }
-
-                let init_expr = declaration.initializer.as_ref().unwrap();
-                let value = emit_transform_expression(init_expr.clone(), into);
-
-                into.push(TaccoInstruction::Copy(value, TaccoVal::Var(declaration.name.clone())));
-            }
+            BlockItem::Declaration(declaration) => emit_declaration(declaration, into),
         }
     });
+}
+
+fn emit_declaration(declaration: &Declaration, into: &mut Vec<TaccoInstruction>) {
+    if declaration.initializer.is_none() {
+        return
+    }
+
+    let init_expr = declaration.initializer.as_ref().unwrap();
+    let value = emit_transform_expression(init_expr.clone(), into);
+
+    into.push(TaccoInstruction::Copy(value, TaccoVal::Var(declaration.name.clone())));
 }
 
 fn emit_statement(statement: Statement, into: &mut Vec<TaccoInstruction>) {
@@ -160,8 +162,85 @@ fn emit_statement(statement: Statement, into: &mut Vec<TaccoInstruction>) {
             into.push(TaccoInstruction::Jump(label));
         },
         Statement::Compound(block) => emit_block_items(&block.block_items, into),
-        _ => todo!()
+        Statement::DoWhile { body, condition, label } => {
+            into.push(TaccoInstruction::Label(label.clone()));
+
+            emit_statement(body.as_ref().clone(), into);
+
+            into.push(TaccoInstruction::Label(format!("{}_continue", label.clone())));
+
+            let result = emit_transform_expression(condition, into);
+
+            let result_var_name = generate_temp_name();
+            let result_var = TaccoVal::Var(result_var_name);
+
+            into.push(TaccoInstruction::Copy(result, result_var.clone()));
+            into.push(TaccoInstruction::JumpIfNotZero(result_var, label.clone()));
+            into.push(TaccoInstruction::Label(format!("{}_break", label)))
+        },
+        Statement::While { condition, body, label } => {
+            let continue_label = format!("{}_continue", label.clone());
+            let break_label = format!("{}_break", label.clone());
+
+            into.push(TaccoInstruction::Label(continue_label.clone()));
+
+            let result = emit_transform_expression(condition, into);
+
+            let result_var_name = generate_temp_name();
+            let result_var = TaccoVal::Var(result_var_name);
+
+            into.push(TaccoInstruction::Copy(result, result_var.clone()));
+            into.push(TaccoInstruction::JumpIfZero(result_var, break_label.clone()));
+
+            emit_statement(body.as_ref().clone(), into);
+
+            into.push(TaccoInstruction::Jump(continue_label));
+            into.push(TaccoInstruction::Label(break_label));
+        },
+        Statement::For { init, condition, post, body, label } => {
+            let continue_label = format!("{}_continue", label.clone());
+            let break_label = format!("{}_break", label.clone());
+
+            emit_for_init(init, into);
+
+            into.push(TaccoInstruction::Label(label.clone()));
+
+            if let Some(condition_expr) = condition {
+                let result = emit_transform_expression(condition_expr, into);
+
+                let result_var_name = generate_temp_name();
+                let result_var = TaccoVal::Var(result_var_name);
+
+                into.push(TaccoInstruction::Copy(result, result_var.clone()));
+                into.push(TaccoInstruction::JumpIfZero(result_var, break_label.clone()));
+            }
+
+            emit_statement(body.as_ref().clone(), into);
+
+            into.push(TaccoInstruction::Label(continue_label));
+
+            if let Some(post_expr) = post {
+                emit_transform_expression(post_expr, into);
+            }
+
+            into.push(TaccoInstruction::Jump(label));
+            into.push(TaccoInstruction::Label(break_label))
+        },
+        Statement::Break(label) => {
+            into.push(TaccoInstruction::Jump(format!("{}_break", label)));
+        },
+        Statement::Continue(label) => {
+            into.push(TaccoInstruction::Jump(format!("{}_continue", label)));
+        }
     }
+}
+
+fn emit_for_init(for_init: ForInitializer, into: &mut Vec<TaccoInstruction>) {
+    match for_init {
+        ForInitializer::Declaration(decl) => emit_declaration(&decl, into),
+        ForInitializer::Expression(Some(expr)) => { emit_transform_expression(expr, into); },
+        ForInitializer::Expression(None) => {},
+    };
 }
 
 fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruction>) -> TaccoVal {
