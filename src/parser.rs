@@ -108,6 +108,13 @@ pub enum Statement {
     Label(String, Box<Statement>),
     Goto(String),
     Compound(Block),
+    Case(Expression, String),
+    Default(String),
+    Switch {
+        control_expression: Expression,
+        body: Block,
+        label: String,
+    },
     While {
         condition: Expression,
         body: Box<Statement>,
@@ -162,6 +169,14 @@ fn parse_block(tokens: &mut Tokens) -> Block {
     let mut next_token = tokens.front().unwrap();
     while *next_token != Token::RightBrace {
         let block_item = parse_block_item(tokens);
+
+        if let BlockItem::Declaration(_) = block_item {
+            if let Some(BlockItem::Statement(Statement::Case(_, _))) = block_items.last() {
+                println!("Declaration right after case isn't allowed!");
+                process::exit(41);
+            }
+        }
+
         block_items.push(block_item);
         next_token = tokens.front().unwrap();
     }
@@ -177,14 +192,8 @@ fn parse_block_item(tokens: &mut Tokens) -> BlockItem {
     println!("Parsing block item");
     let next_token = tokens.front().expect("Parser | Expected token but didn't get one");
     return match next_token {
-        Token::Int => {
-            println!("  -> as declaration");
-            BlockItem::Declaration(parse_declaration(tokens))
-        },
-        _ => {
-            println!("  -> as statement");
-            BlockItem::Statement(parse_statement(tokens))
-        },
+        Token::Int => BlockItem::Declaration(parse_declaration(tokens)),
+        _ => BlockItem::Statement(parse_statement(tokens))
     }
 }
 
@@ -464,6 +473,44 @@ fn parse_int(tokens: &mut Tokens) -> i32 {
 
 fn parse_statement(tokens: &mut Tokens) -> Statement {
     let next_token = tokens.front().cloned().expect("Parser | Expected token but didn't get one.");
+
+    if next_token == Token::Case {
+        expect_token(tokens, Token::Case);
+        let expr = parse_expression(tokens, 0);
+        expect_token(tokens, Token::Colon);
+
+        return Statement::Case(expr, "case".to_string());
+    }
+
+    if next_token == Token::Default {
+        expect_token(tokens, Token::Default);
+        expect_token(tokens, Token::Colon);
+
+        return Statement::Default("case".to_string());
+    }
+
+    if next_token == Token::Switch {
+        expect_token(tokens, Token::Switch);
+        expect_token(tokens, Token::LeftParen);
+
+        let expr = parse_expression(tokens, 0);
+
+        expect_token(tokens, Token::RightParen);
+
+        let body: Block = if let Some(Token::LeftBrace) = tokens.front() {
+            parse_block(tokens)
+        } else {
+            Block { block_items: vec![parse_block_item(tokens)] }
+        };
+
+        return Statement::Switch {
+            control_expression: expr,
+            body,
+            label: "switch".to_string(),
+        }
+    }
+
+
     if next_token == Token::Return {
         expect_token(tokens, Token::Return);
         let return_value = parse_expression(tokens, 0);
@@ -615,6 +662,13 @@ fn parse_statement(tokens: &mut Tokens) -> Statement {
     expect_token(tokens, Token::Semicolon);
 
     return Statement::Expression(expression);
+}
+
+fn is_typename(token: &Token) -> bool {
+    return match *token {
+        Token::Int => true,
+        _ => false,
+    }
 }
 
 fn expect_token(tokens: &mut Tokens, expected: Token) -> Token {

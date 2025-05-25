@@ -1,6 +1,6 @@
 use std::{collections::HashMap, process, sync::Mutex};
 
-use crate::parser::{Block, BlockItem, Declaration, Expression, ForInitializer, FunctionDef, Program, Statement};
+use crate::{lexer::Token, parser::{Block, BlockItem, Declaration, Expression, ForInitializer, FunctionDef, Program, Statement}};
 
 pub fn validate(program: Program) -> Program {
     return label_resolve(var_resolve(program))
@@ -14,6 +14,7 @@ pub fn label_resolve(program: Program) -> Program {
         match block_item {
             BlockItem::Statement(statement) => BlockItem::Statement(label_resolve_statement(statement, &mut label_map, &mut undefined_used_labels)),
             BlockItem::Declaration(declaration) => BlockItem::Declaration(declaration.clone()),
+            _ => todo!(),
         }
     }).collect();
 
@@ -133,6 +134,7 @@ fn var_resolve_statement(statement: &Statement, variable_map: &mut HashMap<Strin
         },
         Statement::Break(label) => Statement::Break(label.clone()),
         Statement::Continue(label) => Statement::Continue(label.clone()),
+        _ => todo!(),
     }
 }
 
@@ -164,6 +166,7 @@ fn var_resolve_block(block: &Block, variable_map: &mut HashMap<String, (String, 
         match block_item {
             BlockItem::Statement(statement) => BlockItem::Statement(var_resolve_statement(statement, variable_map)),
             BlockItem::Declaration(declaration) => BlockItem::Declaration(var_resolve_declaration(declaration, variable_map)),
+            _ => todo!(),
         }
     }).collect();
 

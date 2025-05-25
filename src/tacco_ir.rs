@@ -93,6 +93,7 @@ fn emit_block_items(block_items: &Vec<BlockItem>, into: &mut Vec<TaccoInstructio
                 emit_statement(statement.clone(), into);
             },
             BlockItem::Declaration(declaration) => emit_declaration(declaration, into),
+            _ => todo!(),
         }
     });
 }
@@ -231,7 +232,8 @@ fn emit_statement(statement: Statement, into: &mut Vec<TaccoInstruction>) {
         },
         Statement::Continue(label) => {
             into.push(TaccoInstruction::Jump(format!("{}_continue", label)));
-        }
+        },
+        _ => todo!(),
     }
 }
 
