@@ -49,7 +49,12 @@ fn main() {
         process::exit(0);
     }
 
-    let validated_program = semantics::label_resolve::perform(semantic_analyzer::validate(program));
+    semantics::no_duplicate_default::check_for_duplicate_defaults(&program);
+
+    let validated_program = semantics::label_resolve::perform(
+        semantic_analyzer::validate(program)
+    );
+
     if compiler_args.validate {
         println!("{:?}", validated_program);
         process::exit(0);

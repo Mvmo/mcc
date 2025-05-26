@@ -171,7 +171,7 @@ fn parse_block(tokens: &mut Tokens) -> Block {
         let block_item = parse_block_item(tokens);
 
         if let BlockItem::Declaration(_) = block_item {
-            if let Some(BlockItem::Statement(Statement::Case(_, _))) = block_items.last() {
+            if matches!(block_items.last(), Some(BlockItem::Statement(Statement::Case(_, _))))  {
                 println!("Declaration right after case isn't allowed!");
                 process::exit(41);
             }
