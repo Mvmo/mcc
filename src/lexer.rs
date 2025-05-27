@@ -29,6 +29,7 @@ pub enum Token {
     RightBrace, // }
     QuestionMark, // ?
     Colon, // :
+    Comma, // ,
     Semicolon, // ;
     DecrementOp, // --
     MinusOp, // -
@@ -93,6 +94,7 @@ fn find_keyword_or_symbol(input: &str) -> Option<(Token, &str)> {
     regexes_and_tokens.push((r"^\}", Token::RightBrace));
     regexes_and_tokens.push((r"^\?", Token::QuestionMark));
     regexes_and_tokens.push((r"^\:", Token::Colon));
+    regexes_and_tokens.push((r"^,", Token::Comma));
     regexes_and_tokens.push((r"^;", Token::Semicolon));
     regexes_and_tokens.push((r"^\+\+", Token::IncrementOp));
     regexes_and_tokens.push((r"^--", Token::DecrementOp));
