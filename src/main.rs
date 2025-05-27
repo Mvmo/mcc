@@ -10,7 +10,6 @@ mod asm_gen;
 mod asm_reg_resolver;
 mod code_emitter;
 mod assembler;
-mod case_collector;
 
 mod semantics;
 
@@ -60,8 +59,8 @@ fn compile_file(source: &PathBuf, compiler_args: &CompilerArgs) {
     semantics::no_duplicate_default::check_for_duplicate_defaults(&program);
     let program = semantics::identifier_resolution::resolve_identifiers(&program);
     let program = semantics::loop_label_resolution::resolve_loop_labels(&program);
-    let program = semantics::switch_resolution::perform(&program);
-    let program = case_collector::with_switch_cases(&program);
+    let program = semantics::switch_resolution::perform(&program); // TODO merge switch resolution and case collector
+    let program = semantics::case_collector::with_switch_cases(&program);
 
     if compiler_args.validate {
         println!("{:?}", program);
