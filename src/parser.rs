@@ -114,6 +114,8 @@ pub enum Statement {
         control_expression: Expression,
         body: Block,
         label: String,
+        cases: Option<Vec<Expression>>,
+        default: bool,
     },
     While {
         condition: Expression,
@@ -507,6 +509,8 @@ fn parse_statement(tokens: &mut Tokens) -> Statement {
             control_expression: expr,
             body,
             label: "switch".to_string(),
+            cases: None,
+            default: false,
         }
     }
 
@@ -555,7 +559,7 @@ fn parse_statement(tokens: &mut Tokens) -> Statement {
 
         let body = parse_statement(tokens);
 
-        return Statement::While { condition:
+        return Statement::While {
             condition,
             body: Box::new(body),
             label: "while".to_string(),

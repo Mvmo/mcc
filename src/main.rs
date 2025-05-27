@@ -11,6 +11,7 @@ mod asm_gen;
 mod asm_reg_resolver;
 mod code_emitter;
 mod assembler;
+mod case_collector;
 
 mod semantics;
 
@@ -55,12 +56,15 @@ fn main() {
         semantic_analyzer::validate(program)
     );
 
+
     if compiler_args.validate {
         println!("{:?}", validated_program);
         process::exit(0);
     }
 
-    let tacco_ir_program = tacco_ir::transform(validated_program.clone());
+    let program = case_collector::with_switch_cases(&validated_program);
+
+    let tacco_ir_program = tacco_ir::transform(program);
     if compiler_args.tacco {
         println!("{:?}", tacco_ir_program);
         process::exit(0);

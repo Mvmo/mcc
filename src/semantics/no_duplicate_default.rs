@@ -34,14 +34,14 @@ fn check_in_statement(statement: &Statement, default_count: &mut i32) {
         },
 
         Statement::Compound(block) => check_in_block(block, default_count),
-        Statement::If { condition: _, then, _else } => {
+        Statement::If { then, _else, .. } => {
             check_in_statement(then.as_ref(), default_count);
             _else.as_ref().map(|els| check_in_statement(els.as_ref(), default_count));
         },
-        Statement::For { init: _, condition: _, post: _, body, label: _ } => check_in_statement(body.as_ref(), default_count),
-        Statement::While { condition: _, body, label: _ } => check_in_statement(body.as_ref(), default_count),
-        Statement::DoWhile { body, condition: _, label: _ } => check_in_statement(body.as_ref(), default_count),
-        Statement::Switch { control_expression: _, body, label: _ } => {
+        Statement::For { body, .. } => check_in_statement(body.as_ref(), default_count),
+        Statement::While { body, .. } => check_in_statement(body.as_ref(), default_count),
+        Statement::DoWhile { body, .. } => check_in_statement(body.as_ref(), default_count),
+        Statement::Switch { body, .. } => {
             let mut default_count = 0;
 
             check_in_block(body, &mut default_count);

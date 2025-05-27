@@ -103,7 +103,7 @@ fn label_statement(statement: &Statement, label_stack: &mut Vec<String>, switch_
             then: Box::new(label_statement(then, label_stack, switch_cases)),
             _else: label_optional_statement(&_else.clone().map(|e| e.as_ref().clone()), label_stack, switch_cases).map(|statement| Box::new(statement)),
         },
-        Statement::Switch { control_expression, body, label: _ } => {
+        Statement::Switch { control_expression, body, label: _, cases: _, default } => {
             let new_label = generate_unique_name("switch");
 
             let mut label_stack = label_stack.clone();
@@ -113,6 +113,8 @@ fn label_statement(statement: &Statement, label_stack: &mut Vec<String>, switch_
                 control_expression: control_expression.clone(),
                 body: label_block(body, &mut label_stack, switch_cases),
                 label: new_label,
+                cases: Some(Vec::new()),
+                default: default.clone(),
             }
         },
         Statement::Case(expr, _) => {

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, process, sync::Mutex};
 
-use crate::{parser::{Block, BlockItem, Declaration, Expression, ForInitializer, FunctionDef, Program, Statement}};
+use crate::parser::{Block, BlockItem, Declaration, Expression, ForInitializer, FunctionDef, Program, Statement};
 
 pub fn validate(program: Program) -> Program {
     return label_resolve(var_resolve(program))
@@ -133,12 +133,14 @@ fn var_resolve_statement(statement: &Statement, variable_map: &mut HashMap<Strin
         },
         Statement::Break(label) => Statement::Break(label.clone()),
         Statement::Continue(label) => Statement::Continue(label.clone()),
-        Statement::Switch { control_expression, body, label } => {
+        Statement::Switch { control_expression, body, label, cases, default } => {
             let mut new_variable_map = copy_variable_map(variable_map);
             Statement::Switch {
                 control_expression: var_resolve_expression(control_expression, variable_map),
                 body: var_resolve_block(body, &mut new_variable_map),
                 label: label.clone(),
+                cases: cases.clone(),
+                default: default.clone()
             }
         },
         Statement::Case(expr, label) => Statement::Case(var_resolve_expression(expr, variable_map), label.clone()),
