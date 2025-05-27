@@ -2,15 +2,11 @@ use std::{collections::VecDeque, process};
 
 use crate::lexer::Token;
 
-#[derive(Debug, Clone)]
-pub struct FunctionDef {
-    pub name: String,
-    pub body: Block,
-}
+
 
 #[derive(Debug, Clone)]
 pub struct Program {
-    pub function_definition: FunctionDef,
+    pub function_declarations: Vec<FunctionDeclaration>,
 }
 
 #[derive(Debug, Clone)]
@@ -19,15 +15,28 @@ pub struct Block {
 }
 
 #[derive(Debug, Clone)]
-pub enum BlockItem {
-    Statement(Statement),
-    Declaration(Declaration),
+pub struct FunctionDeclaration {
+    pub name: String,
+    pub params: Vec<String>,
+    pub body: Option<Block>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Declaration {
+pub struct VariableDeclaration {
     pub name: String,
     pub initializer: Option<Expression>,
+}
+
+#[derive(Debug, Clone)]
+pub enum Declaration {
+    Function(FunctionDeclaration),
+    Variable(VariableDeclaration),
+}
+
+#[derive(Debug, Clone)]
+pub enum BlockItem {
+    Statement(Statement),
+    Declaration(Declaration),
 }
 
 #[derive(Debug, Clone)]
@@ -93,7 +102,11 @@ pub enum Expression {
         condition: Box<Expression>,
         if_true: Box<Expression>,
         _else: Box<Expression>,
-    }
+    },
+    FunctionCall {
+        identifier: String,
+        args: Vec<Expression>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -141,7 +154,7 @@ pub enum Statement {
 
 #[derive(Debug, Clone)]
 pub enum ForInitializer {
-    Declaration(Declaration),
+    Declaration(VariableDeclaration),
     Expression(Option<Expression>)
 }
 
@@ -157,9 +170,19 @@ pub fn parse(tokens: Vec<Token>) -> Program {
 }
 
 fn parse_program(tokens: &mut Tokens) -> Program {
-    let function = parse_function(tokens);
+    let mut functions = Vec::<FunctionDeclaration>::new();
+
+    while !tokens.is_empty() && *tokens.front().expect("Expect token") != Token::Eof {
+        let Declaration::Function(function_declaration) = parse_declaration(tokens) else {
+            println!("Variable declarations can't appear at top level!");
+            process::exit(2);
+        };
+
+        functions.push(function_declaration);
+    }
+
     return Program {
-        function_definition: function,
+        function_declarations: functions,
     }
 }
 
@@ -203,7 +226,11 @@ fn parse_for_initializer(tokens: &mut Tokens) -> ForInitializer {
     let next_token = tokens.front().expect("Parser | Expected token but didn't get one");
     return match next_token {
         Token::Int => {
-            let declaration = parse_declaration(tokens);
+            let Declaration::Variable(declaration) = parse_declaration(tokens) else {
+                println!("for initializer must be a variable declaration not a function declaration");
+                process::exit(9);
+            };
+
             ForInitializer::Declaration(declaration)
         },
         Token::Semicolon => {
@@ -222,31 +249,69 @@ fn parse_declaration(tokens: &mut Tokens) -> Declaration {
     expect_token(tokens, Token::Int);
     let identifier = parse_identifier(tokens);
 
-    let mut init_expr = None;
-    let next_token_opt = tokens.front();
-    if let Some(Token::Assign) = next_token_opt {
-        expect_token(tokens, Token::Assign);
-        init_expr = Some(parse_expression(tokens, 0));
-    }
+    let next_token_opt = tokens.front().expect("Expected token but didn't have one");
+    return match next_token_opt {
+        Token::LeftParen => {
+            let params = parse_function_param_list(tokens);
+            let body = if let Some(Token::Semicolon) = tokens.front() {
+                expect_token(tokens, Token::Semicolon);
+                None
+            } else {
+                Some(parse_block(tokens))
+            };
 
-    println!("parse decl");
-    expect_token(tokens, Token::Semicolon);
-    return Declaration { name: identifier, initializer: init_expr }
+            Declaration::Function(FunctionDeclaration {
+                name: identifier,
+                params: params.iter().map(|param| param.1.clone()).collect(),
+                body
+            })
+        },
+        Token::Assign => {
+            expect_token(tokens, Token::Assign);
+            let init_expr = Some(parse_expression(tokens, 0));
+            expect_token(tokens, Token::Semicolon);
+
+            Declaration::Variable(VariableDeclaration {
+                name: identifier,
+                initializer: init_expr,
+            })
+        },
+        Token::Semicolon => {
+            expect_token(tokens, Token::Semicolon);
+
+            Declaration::Variable(VariableDeclaration {
+                name: identifier,
+                initializer: None,
+            })
+        },
+        _ => unreachable!()
+    }
 }
 
-fn parse_function(tokens: &mut Tokens) -> FunctionDef {
-    expect_token(tokens, Token::Int);
-    let identifier = parse_identifier(tokens);
+fn parse_function_param_list(tokens: &mut Tokens) -> Vec<(String, String)> {
+    let mut params = Vec::<(String, String)>::new();
+
     expect_token(tokens, Token::LeftParen);
-    expect_token(tokens, Token::Void);
+
+    if let Some(Token::Void) = tokens.front() {
+        expect_token(tokens, Token::Void);
+    } else {
+        loop {
+            expect_token(tokens, Token::Int);
+            let identifier = parse_identifier(tokens);
+            params.push(("int".to_string(), identifier));
+
+            if *tokens.front().unwrap() != Token::Comma {
+                break
+            }
+
+            expect_token(tokens, Token::Comma);
+        }
+    }
+
     expect_token(tokens, Token::RightParen);
 
-    let block = parse_block(tokens);
-
-    FunctionDef {
-        name: identifier,
-        body: block,
-    }
+    return params;
 }
 
 fn parse_identifier(tokens: &mut Tokens) -> String {
@@ -255,7 +320,29 @@ fn parse_identifier(tokens: &mut Tokens) -> String {
         return value
     }
 
+    println!("! Couldn't parse identifier instead -> {:?}", token_option);
     process::exit(4);
+}
+
+fn parse_argument_list(tokens: &mut Tokens) -> Vec<Expression> {
+    expect_token(tokens, Token::LeftParen);
+
+    let mut args = Vec::<Expression>::new();
+    while *tokens.front().expect("Expected token") != Token::RightParen {
+        let expr = parse_expression(tokens, 0);
+        args.push(expr);
+        if *tokens.front().expect("Expected token") != Token::RightParen {
+            expect_token(tokens, Token::Comma);
+            if let Some(Token::RightParen) = tokens.front() {
+                println!("No trailing comma in argument list");
+                process::exit(2);
+            }
+        }
+    }
+
+    expect_token(tokens, Token::RightParen);
+
+    return args;
 }
 
 fn parse_factor_expression(tokens: &mut Tokens) -> Expression {
@@ -269,7 +356,18 @@ fn parse_factor_expression(tokens: &mut Tokens) -> Expression {
             operator: parse_unary_operator(tokens, false),
             inner_expression: Box::new(parse_factor_expression(tokens))
         },
-        Token::Identifier(_) => Expression::Var(parse_identifier(tokens)),
+        Token::Identifier(_) => {
+            let identifier = parse_identifier(tokens);
+            if let Some(Token::LeftParen) = tokens.front() {
+                let args = parse_argument_list(tokens);
+                return Expression::FunctionCall {
+                    identifier: identifier.clone(),
+                    args,
+                }
+            }
+
+            Expression::Var(identifier)
+        },
         Token::ComplementOp | Token::MinusOp | Token::LogicalNot => Expression::Unary {
             operator: parse_unary_operator(tokens, false),
             inner_expression: Box::new(parse_factor_expression(tokens))

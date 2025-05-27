@@ -4,7 +4,7 @@ use crate::parser::{Block, BlockItem, Expression, Program, Statement};
 
 pub fn check_for_duplicate_defaults(program: &Program) {
     let mut default_count = 0;
-    check_in_block(&program.function_definition.body, &mut default_count)
+    // uncomment: check_in_block(&program.function_definition.body, &mut default_count)
 }
 
 fn check_in_block(block: &Block, default_count: &mut i32) {

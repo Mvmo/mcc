@@ -1,6 +1,6 @@
 use std::{collections::HashMap, process, sync::Mutex};
 
-use crate::parser::{Block, BlockItem, Declaration, Expression, ForInitializer, FunctionDef, Program, Statement};
+use crate::parser::{Block, BlockItem, Declaration, Expression, ForInitializer, Program, Statement};
 
 pub fn validate(program: Program) -> Program {
     return label_resolve(var_resolve(program))
@@ -10,19 +10,20 @@ pub fn label_resolve(program: Program) -> Program {
     let mut undefined_used_labels = Vec::<String>::new();
     let mut label_map = HashMap::<String, String>::new();
 
-    let body = program.function_definition.body.block_items.iter().map(|block_item| {
-        match block_item {
-            BlockItem::Statement(statement) => BlockItem::Statement(label_resolve_statement(statement, &mut label_map, &mut undefined_used_labels)),
-            BlockItem::Declaration(declaration) => BlockItem::Declaration(declaration.clone())
-        }
-    }).collect();
+    // let body = program.function_definition.body.block_items.iter().map(|block_item| {
+    //     match block_item {
+    //         BlockItem::Statement(statement) => BlockItem::Statement(label_resolve_statement(statement, &mut label_map, &mut undefined_used_labels)),
+    //         BlockItem::Declaration(declaration) => BlockItem::Declaration(declaration.clone())
+    //     }
+    // }).collect();
 
     if undefined_used_labels.len() != 0 {
         println!("Semantic Analysis | You've used labels, which are not declared");
         process::exit(40289);
     }
 
-    return Program { function_definition: FunctionDef { name: program.function_definition.name, body: Block { block_items: body } } };
+    // return Program { function_definition: FunctionDef { name: program.function_definition.name, body: Block { block_items: body } } };
+    todo!()
 }
 
 pub fn label_resolve_statement(statement: &Statement, label_map: &mut HashMap<String, String>, undefined_used_labels: &mut Vec<String>) -> Statement {
@@ -66,29 +67,31 @@ pub fn label_resolve_statement(statement: &Statement, label_map: &mut HashMap<St
 pub fn var_resolve(program: Program) -> Program {
     let mut variable_map = HashMap::<String, (String, bool)>::new();
 
-    return Program {
-        function_definition: FunctionDef {
-            name: program.function_definition.name,
-            body: var_resolve_block(&program.function_definition.body, &mut variable_map),
-        }
-    }
+    // return Program {
+    //     function_definition: FunctionDef {
+    //         name: program.function_definition.name,
+    //         body: var_resolve_block(&program.function_definition.body, &mut variable_map),
+    //     }
+    // }
+    todo!()
 }
 
 fn var_resolve_declaration(declaration: &Declaration, variable_map: &mut HashMap<String, (String, bool)>) -> Declaration {
-    if variable_map.contains_key(&declaration.name) && variable_map.get(&declaration.name.clone()).map_or(false, |(_, from_current_scope)| { *from_current_scope }) {
-        println!("Semantic Analyzer | Duplicate variable declaration");
-        process::exit(7);
-    }
+    todo!()
+    // if variable_map.contains_key(&declaration.name) && variable_map.get(&declaration.name.clone()).map_or(false, |(_, from_current_scope)| { *from_current_scope }) {
+    //     println!("Semantic Analyzer | Duplicate variable declaration");
+    //     process::exit(7);
+    // }
 
-    let unique_name = generate_unique_name(declaration.name.clone());
-    variable_map.insert(declaration.name.clone(), (unique_name.clone(), true));
+    // let unique_name = generate_unique_name(declaration.name.clone());
+    // variable_map.insert(declaration.name.clone(), (unique_name.clone(), true));
 
-    let mut init = None;
-    if let Some(init_expr) = declaration.initializer.clone() {
-        init = Some(var_resolve_expression(&init_expr, variable_map));
-    }
+    // let mut init = None;
+    // if let Some(init_expr) = declaration.initializer.clone() {
+    //     init = Some(var_resolve_expression(&init_expr, variable_map));
+    // }
 
-    return Declaration{ name: unique_name, initializer: init };
+    // return Declaration{ name: unique_name, initializer: init };
 }
 
 fn var_resolve_statement(statement: &Statement, variable_map: &mut HashMap<String, (String, bool)>) -> Statement {
@@ -157,7 +160,7 @@ fn var_resolve_optional_expr(expression_opt: &Option<Expression>, variable_map: 
 
 fn var_resolve_for_init(for_init: &ForInitializer, variable_map: &mut HashMap<String, (String, bool)>) -> ForInitializer {
     match for_init {
-        ForInitializer::Declaration(decl) => ForInitializer::Declaration(var_resolve_declaration(decl, variable_map)),
+        ForInitializer::Declaration(decl) => todo!(), // ForInitializer::Declaration(var_resolve_declaration(decl, variable_map)),
         ForInitializer::Expression(expr) => ForInitializer::Expression(var_resolve_optional_expr(&expr, variable_map)),
     }
 }
@@ -184,6 +187,7 @@ fn var_resolve_block(block: &Block, variable_map: &mut HashMap<String, (String, 
 
 fn var_resolve_expression(expression: &Expression, variable_map: &mut HashMap<String, (String, bool)>) -> Expression {
     match expression {
+        _ => todo!(),
         Expression::Assignment(assignment_operator, left, right) => {
             if let Expression::Var(_) = left.as_ref() {
                 return Expression::Assignment(

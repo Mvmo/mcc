@@ -1,6 +1,6 @@
 use std::{process, sync::Mutex};
 
-use crate::parser::{AssignmentOperator, BinaryOperator, BlockItem, Declaration, Expression, ForInitializer, FunctionDef, Program, Statement, UnaryOperator};
+use crate::parser::{AssignmentOperator, BinaryOperator, BlockItem, Declaration, Expression, ForInitializer, FunctionDeclaration, Program, Statement, UnaryOperator};
 
 static TRUE_VALUE: TaccoVal = TaccoVal::Constant(1);
 static FALSE_VALUE: TaccoVal = TaccoVal::Constant(0);
@@ -71,12 +71,13 @@ pub enum TaccoBinaryOperator {
 }
 
 pub fn transform(program: Program) -> TaccoProgram {
-    return TaccoProgram { function_definition: transform_function_definition(program.function_definition) };
+    // return TaccoProgram { function_definition: transform_function_definition(program.function_definition) };
+    todo!()
 }
 
-fn transform_function_definition(function_definition: FunctionDef) -> TaccoFunctionDef {
+fn transform_function_definition(function_definition: FunctionDeclaration) -> TaccoFunctionDef {
     let mut instructions = Vec::<TaccoInstruction>::new();
-    emit_block_items(&function_definition.body.block_items, &mut instructions);
+    // emit_block_items(&function_definition.body.block_items, &mut instructions);
 
     let last_instruction = instructions.last();
     if !matches!(last_instruction, Some(TaccoInstruction::Return(_))) {
@@ -98,14 +99,15 @@ fn emit_block_items(block_items: &Vec<BlockItem>, into: &mut Vec<TaccoInstructio
 }
 
 fn emit_declaration(declaration: &Declaration, into: &mut Vec<TaccoInstruction>) {
-    if declaration.initializer.is_none() {
-        return
-    }
+    // if declaration.initializer.is_none() {
+    //     return
+    // }
 
-    let init_expr = declaration.initializer.as_ref().unwrap();
-    let value = emit_transform_expression(init_expr.clone(), into);
+    // let init_expr = declaration.initializer.as_ref().unwrap();
+    // let value = emit_transform_expression(init_expr.clone(), into);
 
-    into.push(TaccoInstruction::Copy(value, TaccoVal::Var(declaration.name.clone())));
+    // into.push(TaccoInstruction::Copy(value, TaccoVal::Var(declaration.name.clone())));
+    todo!()
 }
 
 fn emit_statement(statement: Statement, into: &mut Vec<TaccoInstruction>) {
@@ -273,7 +275,7 @@ fn emit_statement(statement: Statement, into: &mut Vec<TaccoInstruction>) {
 
 fn emit_for_init(for_init: ForInitializer, into: &mut Vec<TaccoInstruction>) {
     match for_init {
-        ForInitializer::Declaration(decl) => emit_declaration(&decl, into),
+        ForInitializer::Declaration(decl) => todo!(), // emit_declaration(&decl, into),
         ForInitializer::Expression(Some(expr)) => { emit_transform_expression(expr, into); },
         ForInitializer::Expression(None) => {},
     };
@@ -281,6 +283,7 @@ fn emit_for_init(for_init: ForInitializer, into: &mut Vec<TaccoInstruction>) {
 
 fn emit_transform_expression(expression: Expression, into: &mut Vec<TaccoInstruction>) -> TaccoVal {
     match expression {
+        _ => todo!(),
         Expression::Const(int_value) => {
             return TaccoVal::Constant(int_value)
         },

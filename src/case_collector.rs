@@ -1,14 +1,15 @@
-use crate::parser::{Block, BlockItem, Expression, FunctionDef, Program, Statement};
+use crate::parser::{Block, BlockItem, Expression, Program, Statement};
 
 pub fn with_switch_cases(program: &Program) -> Program {
-    let function_body = block_collect_cases(&program.function_definition.body, &mut None, &mut false);
+    // let function_body = block_collect_cases(&program.function_definition.body, &mut None, &mut false);
 
-    return Program {
-        function_definition: FunctionDef {
-            name: program.function_definition.name.clone(),
-            body: function_body,
-        }
-    }
+    todo!()
+    // return Program {
+    //     function_definition: FunctionDef {
+    //         name: program.function_definition.name.clone(),
+    //         body: function_body,
+    //     }
+    // }
 }
 
 fn statement_collect_cases(statement: &Statement, cases: &mut Option<Vec<Expression>>, default: &mut bool) -> Statement {

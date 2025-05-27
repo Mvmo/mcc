@@ -1,6 +1,6 @@
 use std::{collections::{HashMap, HashSet}, process, sync::Mutex};
 
-use crate::parser::{Block, BlockItem, Expression, FunctionDef, Program, Statement};
+use crate::parser::{Block, BlockItem, Expression, Program, Statement};
 
 fn validate_switch_cases(switch_cases: &HashMap<String, Vec<Expression>>) {
     switch_cases.iter().for_each(|(_, cases)| {
@@ -21,16 +21,17 @@ pub fn perform(program: Program) -> Program {
     let mut label_stack = Vec::<String>::new();
     let mut switch_cases = HashMap::<String, Vec<Expression>>::new();
 
-    let function_body = label_block(&program.function_definition.body, &mut label_stack, &mut switch_cases);
+    // let function_body = label_block(&program.function_definition.body, &mut label_stack, &mut switch_cases);
 
     validate_switch_cases(&switch_cases);
 
-    return Program {
-        function_definition: FunctionDef {
-            name: program.function_definition.name,
-            body: function_body,
-        }
-    }
+    // return Program {
+    //     function_definition: FunctionDef {
+    //         name: program.function_definition.name,
+    //         body: function_body,
+    //     }
+    // }
+    todo!()
 }
 
 fn label_statement(statement: &Statement, label_stack: &mut Vec<String>, switch_cases: &mut HashMap<String, Vec<Expression>>) -> Statement {
