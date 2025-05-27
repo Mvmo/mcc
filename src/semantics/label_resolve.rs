@@ -51,14 +51,28 @@ fn label_statement(statement: &Statement, label_stack: &mut Vec<String>, switch_
                 process::exit(88);
             }
 
-            let has_parent_loop = label_stack.iter().take(label_stack.len() - 1).any(|label| label.starts_with("__cs_for") || label.starts_with("__cs_while") || label.starts_with("__cs_do_while"));
+            let current_label = current_label.unwrap();
 
-            if current_label.is_some_and(|label| label.starts_with("__cs_switch")) && !has_parent_loop {
+            let has_parent_loop = label_stack.iter().take(label_stack.len() - 1).any(|label| label.starts_with("__cs_for") || label.starts_with("__cs_while") || label.starts_with("__cs_do_while"));
+            let direct_parent_is_switch = current_label.starts_with("__cs_switch");
+
+            if direct_parent_is_switch && !has_parent_loop {
                 println!("continue is not allowed inside of switch statement");
                 process::exit(87);
             }
 
-            return Statement::Continue(current_label.unwrap().to_string())
+            let correct_parent = if direct_parent_is_switch {
+                if let Some(label) = label_stack.iter().rev().find(|label| label.starts_with("__cs_for") || label.starts_with("__cs_while") || label.starts_with("__cs_do_while")) {
+                    label
+                } else {
+                    println!("Can't find a loop to continue");
+                    process::exit(58);
+                }
+            } else {
+                current_label
+            };
+
+            return Statement::Continue(correct_parent.to_string())
         },
         Statement::While { condition, body, label: _ } => {
             let new_label = generate_unique_name("while");
@@ -142,9 +156,34 @@ fn label_statement(statement: &Statement, label_stack: &mut Vec<String>, switch_
 
             current_cases.push(expr.clone());
 
-            return Statement::Case(expr.clone(), current_label.to_string());
+            let switch_label = if current_label.to_string().starts_with("__cs_switch") {
+                current_label
+            } else {
+                if let Some(label) = label_stack.iter().rev().find(|label| label.starts_with("__cs_switch")) {
+                    label
+                } else {
+                    println!("Can't find a switch for the case");
+                    process::exit(54);
+                }
+            };
+
+            return Statement::Case(expr.clone(), switch_label.to_string());
         },
-        Statement::Default(_) => Statement::Default(current_label.expect("Expect label").to_string()),
+        Statement::Default(_) => {
+            let current_label = current_label.expect("Expect label");
+            let switch_label = if current_label.to_string().starts_with("__cs_switch") {
+                current_label
+            } else {
+                if let Some(label) = label_stack.iter().rev().find(|label| label.starts_with("__cs_switch")) {
+                    label
+                } else {
+                    println!("Can't find a switch for the case");
+                    process::exit(54);
+                }
+            };
+
+            Statement::Default(switch_label.to_string())
+        },
         Statement::Compound(block) => Statement::Compound(label_block(block, label_stack, switch_cases)),
         Statement::Goto(label) => Statement::Goto(label.clone()),
         Statement::Label(label, statement) => Statement::Label(

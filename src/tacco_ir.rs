@@ -93,7 +93,6 @@ fn emit_block_items(block_items: &Vec<BlockItem>, into: &mut Vec<TaccoInstructio
                 emit_statement(statement.clone(), into);
             },
             BlockItem::Declaration(declaration) => emit_declaration(declaration, into),
-            _ => todo!(),
         }
     });
 }
@@ -180,6 +179,7 @@ fn emit_statement(statement: Statement, into: &mut Vec<TaccoInstruction>) {
             into.push(TaccoInstruction::Label(format!("{}_break", label)))
         },
         Statement::While { condition, body, label } => {
+            println!("give out while");
             let continue_label = format!("{}_continue", label.clone());
             let break_label = format!("{}_break", label.clone());
 
@@ -233,7 +233,41 @@ fn emit_statement(statement: Statement, into: &mut Vec<TaccoInstruction>) {
         Statement::Continue(label) => {
             into.push(TaccoInstruction::Jump(format!("{}_continue", label)));
         },
-        _ => todo!(),
+        Statement::Switch { control_expression, body, label, cases, default } => {
+            let control_value = emit_transform_expression(control_expression, into);
+            let control_var = TaccoVal::Var(generate_temp_name());
+            into.push(TaccoInstruction::Copy(control_value, control_var.clone()));
+
+            let result_var = TaccoVal::Var(generate_temp_name());
+            cases.expect("Switch Cases shouldn't be None at this point.")
+                .iter()
+                .for_each(|case| {
+                    // we can safely assume that this is a const expression as it is checked in the semantic analysis
+                    let TaccoVal::Constant(const_val) = emit_transform_expression(case.clone(), into) else { unreachable!() };
+                    into.push(TaccoInstruction::Binary { operator: TaccoBinaryOperator::Equal, src_1: TaccoVal::Constant(const_val), src_2: control_var.clone(), dest: result_var.clone() });
+                    into.push(TaccoInstruction::JumpIfNotZero(result_var.clone(), format!("{}_{}", label.clone(), const_val)));
+                });
+
+            if default {
+                into.push(TaccoInstruction::Jump(format!("{}_default", label)));
+            }
+
+            let break_label = format!("{}_break", label);
+
+            into.push(TaccoInstruction::Jump(break_label.clone()));
+
+            emit_block_items(&body.block_items, into);
+
+            into.push(TaccoInstruction::Label(break_label));
+        },
+        Statement::Case(expr, label) => {
+            let Expression::Const(const_val) = expr else { unreachable!() };
+            into.push(TaccoInstruction::Label(format!("{}_{}", label, const_val)));
+        },
+        Statement::Default(label) => {
+            into.push(TaccoInstruction::Label(format!("{}_default", label)));
+        }
+
     }
 }
 

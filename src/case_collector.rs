@@ -24,7 +24,7 @@ fn statement_collect_cases(statement: &Statement, cases: &mut Option<Vec<Express
             body: Box::new(statement_collect_cases(body, cases, default)),
             label: label.clone()
         },
-        Statement::DoWhile { condition, body, label } => Statement::While {
+        Statement::DoWhile { condition, body, label } => Statement::DoWhile {
             body: Box::new(statement_collect_cases(body, cases, default)),
             condition: condition.clone(),
             label: label.clone()
