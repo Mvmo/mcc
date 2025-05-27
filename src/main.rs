@@ -18,7 +18,7 @@ mod semantics;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct CompilerArgs {
-    input_file: PathBuf,
+    input_files: Vec<PathBuf>,
 
     #[arg(long)]
     lex: bool,
@@ -30,12 +30,20 @@ struct CompilerArgs {
     tacco: bool,
     #[arg(long)]
     codegen: bool,
+    #[arg(short)]
+    c: bool,
 }
 
 fn main() {
     let compiler_args = CompilerArgs::parse();
 
-    let input_file = compiler_args.input_file.clone();
+    compiler_args.input_files.iter().for_each(|source| {
+        compile_file(source, &compiler_args);
+    });
+}
+
+fn compile_file(source: &PathBuf, compiler_args: &CompilerArgs) {
+    let input_file = source.clone();
     let preprocessed = preprocess::with_gcc(input_file);
 
     let tokens = lexer::tokenize(preprocessed);
@@ -79,7 +87,12 @@ fn main() {
         process::exit(0);
     }
 
-    let output_assembly_file = compiler_args.input_file.with_extension("s");
+    let output_assembly_file = source.with_extension("s");
     code_emitter::emit(asm_program, output_assembly_file.clone());
-    assembler::with_gcc(output_assembly_file);
+
+    if compiler_args.c {
+        assembler::perform_object_assembly(output_assembly_file);
+    } else {
+        assembler::perform_executable_assembly(output_assembly_file);
+    }
 }
