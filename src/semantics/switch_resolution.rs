@@ -1,6 +1,6 @@
 use std::{collections::{HashMap, HashSet}, process, sync::Mutex};
 
-use crate::parser::{Block, BlockItem, Expression, Program, Statement};
+use crate::parser::{Block, BlockItem, Expression, FunctionDeclaration, Program, Statement};
 
 fn validate_switch_cases(switch_cases: &HashMap<String, Vec<Expression>>) {
     switch_cases.iter().for_each(|(_, cases)| {
@@ -17,21 +17,27 @@ fn validate_switch_cases(switch_cases: &HashMap<String, Vec<Expression>>) {
     });
 }
 
-pub fn perform(program: Program) -> Program {
+pub fn perform(program: &Program) -> Program {
     let mut label_stack = Vec::<String>::new();
     let mut switch_cases = HashMap::<String, Vec<Expression>>::new();
 
-    // let function_body = label_block(&program.function_definition.body, &mut label_stack, &mut switch_cases);
+    let declarations = program.function_declarations.iter()
+        .map(|decl| label_function_declaration(decl, &mut label_stack, &mut switch_cases))
+        .collect();
 
     validate_switch_cases(&switch_cases);
 
-    // return Program {
-    //     function_definition: FunctionDef {
-    //         name: program.function_definition.name,
-    //         body: function_body,
-    //     }
-    // }
-    todo!()
+    return Program {
+        function_declarations: declarations,
+    }
+}
+
+fn label_function_declaration(function_declaration: &FunctionDeclaration, label_stack: &mut Vec<String>, switch_cases: &mut HashMap<String, Vec<Expression>>) -> FunctionDeclaration {
+    return FunctionDeclaration {
+        name: function_declaration.name.clone(),
+        body: function_declaration.body.as_ref().map(|block| label_block(block, label_stack, switch_cases)),
+        params: function_declaration.params.clone(),
+    }
 }
 
 fn label_statement(statement: &Statement, label_stack: &mut Vec<String>, switch_cases: &mut HashMap<String, Vec<Expression>>) -> Statement {

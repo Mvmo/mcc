@@ -1,10 +1,14 @@
 use std::process;
 
-use crate::parser::{Block, BlockItem, Expression, Program, Statement};
+use crate::parser::{Block, BlockItem, Program, Statement};
 
 pub fn check_for_duplicate_defaults(program: &Program) {
     let mut default_count = 0;
-    // uncomment: check_in_block(&program.function_definition.body, &mut default_count)
+    program.function_declarations.iter().for_each(|decl| {
+        if let Some(block) = decl.body.clone() {
+            check_in_block(&block, &mut default_count);
+        }
+    });
 }
 
 fn check_in_block(block: &Block, default_count: &mut i32) {

@@ -5,7 +5,6 @@ use clap::{Parser, command, arg};
 mod preprocess;
 mod lexer;
 mod parser;
-mod semantic_analyzer;
 mod tacco_ir;
 mod asm_gen;
 mod asm_reg_resolver;
@@ -59,18 +58,15 @@ fn compile_file(source: &PathBuf, compiler_args: &CompilerArgs) {
     }
 
     semantics::no_duplicate_default::check_for_duplicate_defaults(&program);
-
-    let validated_program = semantics::label_resolve::perform(
-        semantic_analyzer::validate(program)
-    );
-
+    let program = semantics::identifier_resolution::resolve_identifiers(&program);
+    let program = semantics::loop_label_resolution::resolve_loop_labels(&program);
+    let program = semantics::switch_resolution::perform(&program);
+    let program = case_collector::with_switch_cases(&program);
 
     if compiler_args.validate {
-        println!("{:?}", validated_program);
+        println!("{:?}", program);
         process::exit(0);
     }
-
-    let program = case_collector::with_switch_cases(&validated_program);
 
     let tacco_ir_program = tacco_ir::transform(program);
     if compiler_args.tacco {
